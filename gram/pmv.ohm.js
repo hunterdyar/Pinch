@@ -55,12 +55,15 @@ bodyDelim = ("\\n" | ";")
     ~stopProc ident
     | ~stopProc number
   
-  Statement =
+   Statement =
   Procedure
+  | ObjectAndBodyStatement
   | DefineElementStatement
   | ObjectStatement
 
-//circle 20 30 banana
+ObjectAndBodyStatement =
+ObjectStatement ProcBody
+
 ObjectStatement =
 //| ident Object #sc?
 | ident listOf<Object,whitespace>
@@ -84,9 +87,9 @@ ObjectStatement =
     = pipe ObjectStatement
 
 	pipe = "|"
-
+  
   ident  (an identifier)
-    = letter alnum*
+    = letter ("-" | "_" | alnum)*
 
   number  (a number)
     = digit* "." digit+  -- fract

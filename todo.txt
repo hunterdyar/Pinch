@@ -1,0 +1,9 @@
+Lexing
+- negative numbers
+- string literals
+- define vars
+
+Parsing/Compiling
+- rectangle 
+
+Program

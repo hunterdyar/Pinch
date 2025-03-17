@@ -11,10 +11,15 @@ inputBox.oninput = function update(){
 
 function draw(){
     let text = inputBox.value
-    let svg = CreateSVG(text);
-    output.innerText = ""
-    output.appendChild(svg);
-    rawoutput.value = output.innerHTML
+    try {
+        let svg = CreateSVG(text);
+        output.innerText = ""
+        output.appendChild(svg);
+        rawoutput.value = output.innerHTML
+    } catch (error) {
+        console.error(error)
+    }
+   
 }
 
 

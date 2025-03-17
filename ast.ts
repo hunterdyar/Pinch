@@ -6,14 +6,15 @@ enum NodeType {
     ProcBody,
     DefineElement,
     BodyStatement,
-    Transformation
+    Transformation,
+    ObjectWithBody
 }
 
 class treeNode {
     type: NodeType
     id: string
     children: any[]
-    constructor(ns: NodeType, id: string,...childs: any[])
+    constructor(ns: NodeType, id: string,childs: any[])
     {
         this.type = ns
         this.id = id

@@ -10,30 +10,16 @@ const s = g.createSemantics()
 s.addOperation("toTree",{
     Program(s,_) {return new treeNode(NodeType.Program, "program",s.children.map(x=>x.toTree()))},
     ObjectStatement(ident,c) {
-        let parameters:any[] = []
-            c.children.forEach(nonEmptyList => {
-                    if(nonEmptyList.ctorName != "nonemptyListOf" && nonEmptyList.ctorName != "emptyListOf"){
-                        throw new Error("Unexpected Object Statement Structure")
-                    }
-                    nonEmptyList.children.forEach(element => {
-                        element.children.forEach(e => {
-                            let x = e.toTree()
-                            if(x != null && x != undefined){
-                               // console.log("osc "+e.ctorName)
-                                parameters.push(x)
-                            }
-                            
-                        });
-                    });
-            });
-        
+        let parameters = c.asIteration().children.map(x=>x.toTree())
         return new treeNode(NodeType.ObjectStatement,ident.sourceString,parameters)
     },
+    // BodyStatement(b){
+    //     console.log("body statement is "+b.ctorName)
+    //     return b.toTree()
+    // },
     Transformation(pipe,b) {
-        let operation = []
-        
-        console.log("transformation",pipe,b)
-        return new treeNode(NodeType.Transformation,"|",b.child(1).children.forEach(x=>x.toTree()));
+        let os = b.toTree();
+        return new treeNode(NodeType.Transformation,"|",[os]);
     },
     //@ts-ignore
     DefineElementStatement(a,b,c) {
@@ -41,10 +27,14 @@ s.addOperation("toTree",{
             return x.toTree()
         }))
     },
-   
+    ObjectAndBodyStatement(a,b){
+        let o = a.toTree()
+        let body = b.toTree()
+        return new treeNode(NodeType.ObjectWithBody, "owithn",[o,body])
+    },
     //@ts-ignore
     ProcBody(a,b,c) {
-        return b.children.map(x=>x.toTree())
+        return new treeNode(NodeType.ProcBody, "procBody",b.children.map(x=>x.toTree()))
     },
     number(n) {
         return new treeNode(NodeType.Number,n.sourceString,[])
@@ -52,7 +42,13 @@ s.addOperation("toTree",{
     ident(n,r) {
         return new treeNode(NodeType.Identifier, n.sourceString+r.sourceString,[])
     },
-    whitespace(w){return null}
+    whitespace(w){return null},
+    _iter(...c){
+        console.log("iter",c)
+        return c.map(x => {
+            x.toTree();
+        });
+    },    
 })
 
 
