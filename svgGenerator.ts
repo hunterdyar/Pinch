@@ -43,6 +43,9 @@ function compileAndRun(root: treeNode): SVGElement{
     root.children.forEach(child => {
         //@ts-ignore
         compile(child, environment);
+        if(environment.stack.length >= 2){
+            environment.pop()
+        }
     });
 
     if(environment.stack.length != 1){

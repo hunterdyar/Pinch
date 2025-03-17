@@ -8,25 +8,27 @@ const g = grammar(pnvGrammar);
 const s = g.createSemantics()
 
 s.addOperation("toTree",{
+    //@ts-ignore
     Program(s,_) {return new treeNode(NodeType.Program, "program",s.children.map(x=>x.toTree()))},
+    //@ts-ignore
     ObjectStatement(ident,c) {
+        console.log("os",ident,c)
         let parameters = c.asIteration().children.map(x=>x.toTree())
         return new treeNode(NodeType.ObjectStatement,ident.sourceString,parameters)
     },
-    // BodyStatement(b){
-    //     console.log("body statement is "+b.ctorName)
-    //     return b.toTree()
-    // },
+    //@ts-ignore
     Transformation(pipe,b) {
         let os = b.toTree();
         return new treeNode(NodeType.Transformation,"|",[os]);
     },
     //@ts-ignore
     DefineElementStatement(a,b,c) {
+        console.log("def statement",b,c);
         return new treeNode(NodeType.DefineElement,b.sourceString,c.child(1).children.map(x=>{       
             return x.toTree()
         }))
     },
+    //@ts-ignore
     ObjectAndBodyStatement(a,b){
         let o = a.toTree()
         let body = b.toTree()
@@ -36,9 +38,11 @@ s.addOperation("toTree",{
     ProcBody(a,b,c) {
         return new treeNode(NodeType.ProcBody, "procBody",b.children.map(x=>x.toTree()))
     },
-    number(n) {
+     //@ts-ignore
+     number(n) {
         return new treeNode(NodeType.Number,n.sourceString,[])
     },
+    //@ts-ignore
     ident(n,r) {
         return new treeNode(NodeType.Identifier, n.sourceString+r.sourceString,[])
     },
@@ -48,12 +52,12 @@ s.addOperation("toTree",{
         return c.map(x => {
             x.toTree();
         });
-    },    
+    }
 })
 
 
 
-function CreateSVG(input: string): HTMLElement{
+function CreateSVG(input: string): SVGElement{
     let lex = g.match(input);
     if(lex.succeeded())
     {

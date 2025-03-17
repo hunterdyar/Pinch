@@ -1,9 +1,9 @@
-import { CreateSVG } from "./index";
+import { CreateSVG } from "./parser";
 console.log("Starting!");
 const inputBox = document.getElementById("input") as HTMLTextAreaElement
 const output = document.getElementById("outputContainer") as HTMLDivElement
 const rawoutput = document.getElementById("rawContainer") as HTMLTextAreaElement
-
+const errorp = document.getElementById("errorArea") as HTMLParagraphElement
 inputBox.oninput = function update(){
     draw();
 }
@@ -16,8 +16,10 @@ function draw(){
         output.innerText = ""
         output.appendChild(svg);
         rawoutput.value = output.innerHTML
+        errorp.innerText = ""
     } catch (error) {
         console.error(error)
+        errorp.innerText = error.toString()
     }
    
 }
