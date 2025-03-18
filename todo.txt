@@ -1,7 +1,5 @@
 Lexing
-- negative numbers
 - string literals
-- define things
 
 Parsing/Compiling
 - rectangle 
