@@ -42,13 +42,14 @@ bodyDelim = ("\\n" | ";")
 
     doProc = ">"
     stopProc = "." ~digit
-    
+    define = "def"
+
     ProcBody = 
     doProc BodyStatement stopProc
     | doProc BodyStatement* stopProc
 
 	DefineElementStatement =
-    "def" ident ProcBody
+    define ident ProcBody
 
 	literal = 
     ~stopProc ident
@@ -92,11 +93,11 @@ objectStatement =
     = ~reservedKeyword letter ("-" | "_" | alnum)* 
     
     reservedKeyword =
-    "def"
+    define
 
   number  (a number)
-    = digit* "." digit+  -- fract
-    | digit+             -- whole
+    = "-"? digit* "." digit+  -- fract
+    | "-"? digit+             -- whole
     
 
 }
