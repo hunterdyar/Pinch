@@ -5,13 +5,21 @@ class Environment  {
     width: Number = 256
     height: Number = 256
     stack: Context[] = []
+    defaults: Dict<string> = {
+        "stroke": "black",
+        "fill": "lightgrey",
+        "stroke-width": "5",
+    }
     definitions: Dict<treeNode[]> = {} 
+    debug: string[] = []
 
     push(i:Context){
+        this.debug.push("push")
         let b4 = this.stack.length
         this.stack.push(i)
     }
     pop():Context{
+        this.debug.push("pop")
         let x= this.stack.pop();
         if(x){
             return x
@@ -29,6 +37,7 @@ class Environment  {
         }
     }
     addDefinition(identifier: string, body: treeNode[]){
+        this.debug.push("def "+identifier)
         if(identifier in this.definitions){
             throw new Error("Can't define "+identifier+" . It is already defined.");
         }
@@ -40,12 +49,28 @@ class Environment  {
     }
     getDefinition(identifier: string):treeNode[]
     {
+        this.debug.push("get def "+identifier)
         let x = this.definitions[identifier]
         if(x != undefined){
             return x;
         }else{
             throw new Error("Invlid definition lookup. "+identifier)
         }
+    }
+    getDefault(key: string):string{
+        key = key.toLowerCase()
+        if(key in this.defaults){
+         let x = this.defaults[key]
+         if(x != null)
+         {
+            return x;
+         }
+        }
+        throw new Error("Unknown default key "+key);
+    }
+    printdebug(){
+        let s = this.debug.reduce((s,x)=>s+x+", ")
+        console.log(s);
     }
 
 }
@@ -61,10 +86,15 @@ function compileAndRun(root: treeNode): SVGElement{
         throw new Error("invalid root object. trying anyway...")
     }
     root.children.forEach(child => {
+        environment.debug.push("\n|root \n")
         //@ts-ignore
         compile(child, environment);
+        environment.printdebug()
+
         if(environment.stack.length >= 2){
             environment.pop()
+        }else{
+            console.log("protecting last item on stack.")
         }
     });
 
@@ -100,13 +130,13 @@ function compile(node:treeNode, env: Environment){
         case NodeType.BodyStatement:
             break;
         case NodeType.ObjectWithBody:
+            env.debug.push("owb")
             if(node.children.length != 2){
                 throw new Error("bad Object with Body Format")
             }
             compile(node.children[0],env)
             compile(node.children[1],env)
-            env.pop()
-
+           // env.pop()//the . clears the stack basically.
             break;
         case NodeType.ProcBody:
             node.children.forEach(x=>{
@@ -136,13 +166,14 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
             }
             d.setAttribute("cx","0")
             d.setAttribute("cy","0")
-            d.setAttribute("stroke","black")
-            d.setAttribute("fill","red")
-            d.setAttribute("stroke-width", "5")
+            d.setAttribute("stroke",env.getDefault("stroke"))
+            d.setAttribute("fill",env.getDefault("fill"))
+            d.setAttribute("stroke-width", env.getDefault("stroke-width"))
 
 
             let c = env.peek();
             (c as HTMLElement).appendChild(d);
+            env.debug.push("circle")
             env.push(d)
             
             break;
@@ -172,19 +203,26 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
             return;
         default:
             //variable lookup!            
-            if(env.hasDefinition(node.id)){
-                //push?
-                let body = env.getDefinition(node.id)
-                body.forEach(x=>{
-                    compile(x,env);
-                });
-                //pop? push?
-            }
+            tryRunVariableLookup(node.id,env)
         }
 
         //this is down here just so we don't have to keep writing it.
         
     //
+}
+
+function tryRunVariableLookup(id: string, env:Environment):boolean{
+    if(env.hasDefinition(id)){
+        //push?
+
+        let body = env.getDefinition(id)
+        body.forEach(x=>{
+            compile(x,env);
+        });
+        //pop? push?
+        return true
+    }
+    return false
 }
 
 function compileTransformation(node:treeNode, env: Environment){
@@ -231,13 +269,16 @@ function compileTransformation(node:treeNode, env: Environment){
             }
 
             context.setAttribute("cx",x+ex)
+            context.setAttribute("cy",y+ey)
 
             break;
         default:
-            let attr = node.id
-            let val = compile(node.children[0])
-            console.log("unenforced attribute:",attr,val)
-            context.setAttribute(attr,val)
+            if(!tryRunVariableLookup(node.id,env)){
+                let attr = node.id
+                let val = compile(node.children[0],env)
+                console.log("unenforced attribute:",attr,val)
+                context.setAttribute(attr,val)
+            }
     }
 }
     export{ compileAndRun}
