@@ -4,4 +4,7 @@ Lexing
 Parsing/Compiling
 - rectangle 
 - make dx and dy with functions, then let translate use them.
+- Update x or cx as appropriate to the context.
+
 Program
+
