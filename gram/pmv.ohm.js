@@ -37,10 +37,9 @@ bodyDelim = ("\\n" | ";")
                  | "\u200C" | "\u200D"
 	
 
-      sc = space* (";" | end)
+    sc = space* (";" | end)
      | spacesNoNL (lineTerminator | &".")
 
-   
     doProc = ">"
     stopProc = "." ~digit
     
@@ -49,7 +48,7 @@ bodyDelim = ("\\n" | ";")
     | doProc BodyStatement* stopProc
 
 	DefineElementStatement =
-    "defel" ident ProcBody
+    "def" ident ProcBody
 
 	literal = 
     ~stopProc ident
@@ -59,37 +58,41 @@ bodyDelim = ("\\n" | ";")
   Procedure
   | ObjectAndBodyStatement
   | DefineElementStatement
-  | ObjectStatement
+  | objectStatement
 
 ObjectAndBodyStatement =
-ObjectStatement ProcBody
+objectStatement ProcBody
 
-ObjectStatement =
+objectStatement =
 //| ident Object #sc?
-| ident listOf<Object,whitespace>
+
+| ident whitespace? listOf<object,whitespace>
     
     BodyStatement =
     Transformation
-    | ObjectStatement
-    
-
+    | ObjectAndBodyStatement
+    | objectStatement
+ 
     
     Procedure
     = 
      ProcBody
     
-    Object
+    object
     = ident 
     | literal
     
     
     Transformation
-    = pipe ObjectStatement
+    = pipe objectStatement
 
 	pipe = "|"
-  
+
   ident  (an identifier)
-    = letter ("-" | "_" | alnum)*
+    = ~reservedKeyword letter ("-" | "_" | alnum)* 
+    
+    reservedKeyword =
+    "def"
 
   number  (a number)
     = digit* "." digit+  -- fract

@@ -5,14 +5,14 @@ import { compileAndRun } from "./svgGenerator";
 import { pnvGrammar } from "./gram/pmv.ohm";
 
 const g = grammar(pnvGrammar);
+
 const s = g.createSemantics()
 
 s.addOperation("toTree",{
     //@ts-ignore
     Program(s,_) {return new treeNode(NodeType.Program, "program",s.children.map(x=>x.toTree()))},
     //@ts-ignore
-    ObjectStatement(ident,c) {
-        console.log("os",ident,c)
+    objectStatement(ident,w,c) {
         let parameters = c.asIteration().children.map(x=>x.toTree())
         return new treeNode(NodeType.ObjectStatement,ident.sourceString,parameters)
     },
@@ -23,10 +23,7 @@ s.addOperation("toTree",{
     },
     //@ts-ignore
     DefineElementStatement(a,b,c) {
-        console.log("def statement",b,c);
-        return new treeNode(NodeType.DefineElement,b.sourceString,c.child(1).children.map(x=>{       
-            return x.toTree()
-        }))
+        return new treeNode(NodeType.DefineElement,b.sourceString,c.toTree().children);
     },
     //@ts-ignore
     ObjectAndBodyStatement(a,b){
@@ -52,9 +49,9 @@ s.addOperation("toTree",{
         return c.map(x => {
             x.toTree();
         });
-    }
-})
+    },
 
+})
 
 
 function CreateSVG(input: string): SVGElement{
@@ -62,7 +59,7 @@ function CreateSVG(input: string): SVGElement{
     if(lex.succeeded())
     {
         let ast = s(lex).toTree();
-        let svg = compileAndRun(ast);
+        const svg = compileAndRun(ast);
         return svg;
     }else{
         throw new Error(lex.message)

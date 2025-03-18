@@ -5,7 +5,7 @@ class Environment  {
     width: Number = 256
     height: Number = 256
     stack: Context[] = []
-    definitions: Dict<string> = {} 
+    definitions: Dict<treeNode[]> = {} 
 
     push(i:Context){
         let b4 = this.stack.length
@@ -28,6 +28,26 @@ class Environment  {
             throw new Error("cannot pop")
         }
     }
+    addDefinition(identifier: string, body: treeNode[]){
+        if(identifier in this.definitions){
+            throw new Error("Can't define "+identifier+" . It is already defined.");
+        }
+
+        this.definitions[identifier] = body
+    }
+    hasDefinition(identifier: string):boolean{
+        return identifier in this.definitions
+    }
+    getDefinition(identifier: string):treeNode[]
+    {
+        let x = this.definitions[identifier]
+        if(x != undefined){
+            return x;
+        }else{
+            throw new Error("Invlid definition lookup. "+identifier)
+        }
+    }
+
 }
 //todo: wrapper class with context types
 type Context = HTMLElement | SVGElement | Number | string 
@@ -93,6 +113,9 @@ function compile(node:treeNode, env: Environment){
                 compile(x,env)  
             })
             break;
+        case NodeType.DefineElement:            
+            env.addDefinition(node.id,node.children)
+            break;
         default: 
             console.log("unhandled:",node)
     }
@@ -100,20 +123,28 @@ function compile(node:treeNode, env: Environment){
 }
 
 function compileStandaloneObjectStatement(node:treeNode, env: Environment){
-    //create and append child to context
-    let d = document.createElementNS("http://www.w3.org/2000/svg",node.id);
     switch(node.id){
         case "circle":
+            //todo: boilerplate out the d element code.
+            let d = document.createElementNS("http://www.w3.org/2000/svg",node.id);
             //setting radius inline is optional
             if(node.children.length>=1){
                 let radius = compile(node.children[0],env)
-                d.setAttribute("r",radius)
+                if(radius != null){
+                    d.setAttribute("r",radius)
+                }
             }
             d.setAttribute("cx","0")
             d.setAttribute("cy","0")
             d.setAttribute("stroke","black")
             d.setAttribute("fill","red")
             d.setAttribute("stroke-width", "5")
+
+
+            let c = env.peek();
+            (c as HTMLElement).appendChild(d);
+            env.push(d)
+            
             break;
         case "rect":
             break;
@@ -139,10 +170,20 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
                 console.log("cannot parse height:",h)
             }
             return;
+        default:
+            //variable lookup!            
+            if(env.hasDefinition(node.id)){
+                //push?
+                let body = env.getDefinition(node.id)
+                body.forEach(x=>{
+                    compile(x,env);
+                });
+                //pop? push?
+            }
         }
-    let c = env.peek();
-    (c as HTMLElement).appendChild(d);
-    env.push(d)
+
+        //this is down here just so we don't have to keep writing it.
+        
     //
 }
 
@@ -172,6 +213,7 @@ function compileTransformation(node:treeNode, env: Environment){
             let x = parseFloat(compile(node.children[0]))
             let y = parseFloat(compile(node.children[1]))
     
+
             let ex = parseFloat(context.getAttribute("cx"))
             let ey = parseFloat(context.getAttribute("cy"))
             if(x == null || y==null)
