@@ -153,10 +153,12 @@ function compile(node:treeNode, env: Environment){
 }
 
 function compileStandaloneObjectStatement(node:treeNode, env: Environment){
+    let d: SVGElement
+    let c: Context
     switch(node.id){
         case "circle":
             //todo: boilerplate out the d element code.
-            let d = document.createElementNS("http://www.w3.org/2000/svg",node.id);
+            d = document.createElementNS("http://www.w3.org/2000/svg",node.id) as SVGElement;
             //setting radius inline is optional
             if(node.children.length>=1){
                 let radius = compile(node.children[0],env)
@@ -171,13 +173,40 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
             d.setAttribute("stroke-width", env.getDefault("stroke-width"))
 
 
-            let c = env.peek();
+            c = env.peek();
             (c as HTMLElement).appendChild(d);
             env.debug.push("circle")
             env.push(d)
             
             break;
         case "rect":
+            d = document.createElementNS("http://www.w3.org/2000/svg",node.id) as SVGElement;
+            //setting radius inline is optional
+            if(node.children.length==2){
+                //todo: this can become a function where we pass in a list of attributes and array of children to compile for them.
+                //or even, we pass in a lookup table of valid "method signatures" of arrays of different lengths. Neat!
+                let width = compile(node.children[0],env)
+                if(width != null){
+                    d.setAttribute("width",width)
+                }
+
+                let height = compile(node.children[0],env)
+                if(height != null){
+                    d.setAttribute("height",height)
+                }
+            }
+            //if length is 4, set x y width height
+            d.setAttribute("x","0")
+            d.setAttribute("y","0")
+            d.setAttribute("stroke",env.getDefault("stroke"))
+            d.setAttribute("fill",env.getDefault("fill"))
+            d.setAttribute("stroke-width", env.getDefault("stroke-width"))
+
+
+            c = env.peek();
+            (c as HTMLElement).appendChild(d);
+            env.debug.push("rect")
+            env.push(d)
             break;
         //Static Function Calls...
         case "width":
@@ -236,11 +265,17 @@ function compileTransformation(node:treeNode, env: Environment){
             break;
         case "x":
         case "cx":
+            //todo: determine if we need to update x or cx
         context.setAttribute("cx",compile(node.children[0]))
+        context.setAttribute("x",compile(node.children[0]))
+
             break;
         case "y":
         case "cy":
+            //todo: determine if we need to update y or cy. We can check if context is a circle, or if it has a cx attribute.
         context.setAttribute("cy",compile(node.children[0]))
+        context.setAttribute("y",compile(node.children[0]))
+
             break;
         case "stroke-width":
         case "sw":
