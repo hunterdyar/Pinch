@@ -1,5 +1,6 @@
 import { env } from "bun";
 import { NodeType, treeNode } from "./ast";
+import { getSignature } from "./methodSigs";
 
 class Environment  {
     width: Number = 256
@@ -160,12 +161,23 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
             //todo: boilerplate out the d element code.
             d = document.createElementNS("http://www.w3.org/2000/svg",node.id) as SVGElement;
             //setting radius inline is optional
-            if(node.children.length>=1){
-                let radius = compile(node.children[0],env)
-                if(radius != null){
-                    d.setAttribute("r",radius)
+            var sig = getSignature(node.children.length,"circle");
+            console.log("got ",sig)
+
+            for(let i = 0;i<sig.length;i++){
+                let attr = compile(node.children[i],env)
+                if(attr != null ){
+                    let attrName = sig[i]
+                    if(attrName!= undefined){
+                        d.setAttribute(attrName,attr);
+                    }else{
+                        throw new Error("bad signature check?")
+                    }
+                }else{
+                    throw new Error("bad signature?");
                 }
             }
+
             d.setAttribute("cx","0")
             d.setAttribute("cy","0")
             d.setAttribute("stroke",env.getDefault("stroke"))
@@ -181,20 +193,23 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
             break;
         case "rect":
             d = document.createElementNS("http://www.w3.org/2000/svg",node.id) as SVGElement;
-            //setting radius inline is optional
-            if(node.children.length==2){
-                //todo: this can become a function where we pass in a list of attributes and array of children to compile for them.
-                //or even, we pass in a lookup table of valid "method signatures" of arrays of different lengths. Neat!
-                let width = compile(node.children[0],env)
-                if(width != null){
-                    d.setAttribute("width",width)
-                }
 
-                let height = compile(node.children[0],env)
-                if(height != null){
-                    d.setAttribute("height",height)
+            var sig = getSignature(node.children.length,"rect");
+            for(let i = 0;i<sig.length;i++){
+                let attr = compile(node.children[i],env)
+                if(attr != null ){
+                    let attrName = sig[i]
+                    if(attrName!= undefined){
+                        d.setAttribute(attrName,attr);
+                    }else{
+                        throw new Error("bad signature check?")
+                    }
+                }else{
+                    throw new Error("bad signature?");
                 }
             }
+            
+        
             //if length is 4, set x y width height
             d.setAttribute("x","0")
             d.setAttribute("y","0")
@@ -316,4 +331,7 @@ function compileTransformation(node:treeNode, env: Environment){
             }
     }
 }
-    export{ compileAndRun}
+
+
+
+export{ compileAndRun}
