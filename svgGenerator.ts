@@ -5,6 +5,7 @@ class Environment  {
     width: Number = 256
     height: Number = 256
     stack: Context[] = []
+    baseSVG: Context = null
     defaults: Dict<string> = {
         "stroke": "black",
         "fill": "lightgrey",
@@ -24,16 +25,20 @@ class Environment  {
         if(x){
             return x
         }else{
-            console.log("error in stack",this.stack)
-            throw new Error("cannot pop")
+            console.log("popped empty stack!",this.stack)
+            return this.baseSVG
         }
     }
     peek():Context{
+        if(this.stack.length == 0){
+            return this.baseSVG
+        }
+        
         let x= this.stack[this.stack.length-1]
         if(x){
             return x
         }else{
-            throw new Error("cannot pop")
+            throw new Error("cannot peek")
         }
     }
     addDefinition(identifier: string, body: treeNode[]){
@@ -92,7 +97,7 @@ function compileAndRun(root: treeNode): SVGElement{
         environment.printdebug()
 
         if(environment.stack.length >= 2){
-            environment.pop()
+       //     environment.pop()
         }else{
             console.log("protecting last item on stack.")
         }
@@ -129,19 +134,16 @@ function compile(node:treeNode, env: Environment){
             break;
         case NodeType.BodyStatement:
             break;
-        case NodeType.ObjectWithBody:
-            env.debug.push("owb")
-            if(node.children.length != 2){
-                throw new Error("bad Object with Body Format")
-            }
+        case NodeType.Append:
+            //add to current object.
             compile(node.children[0],env)
-            compile(node.children[1],env)
-           // env.pop()//the . clears the stack basically.
             break;
-        case NodeType.ProcBody:
-            node.children.forEach(x=>{
-                compile(x,env)  
-            })
+        case NodeType.Push:
+            let o = compile(node.children[0],env)
+            env.push(o); 
+            break;
+        case NodeType.Pop():
+            env.pop();
             break;
         case NodeType.DefineElement:            
             env.addDefinition(node.id,node.children)

@@ -13,6 +13,7 @@ s.addOperation("toTree",{
     Program(s,_) {return new treeNode(NodeType.Program, "program",s.children.map(x=>x.toTree()))},
     //@ts-ignore
     objectStatement(ident,w,c) {
+        console.log("os");
         let parameters = c.asIteration().children.map(x=>x.toTree())
         return new treeNode(NodeType.ObjectStatement,ident.sourceString,parameters)
     },
@@ -22,18 +23,21 @@ s.addOperation("toTree",{
         return new treeNode(NodeType.Transformation,"|",[os]);
     },
     //@ts-ignore
-    DefineElementStatement(a,b,c) {
-        return new treeNode(NodeType.DefineElement,b.sourceString,c.toTree().children);
+    DefineNamedStatement(a,b,c) {
+        return new treeNode(NodeType.DefineElement,b.sourceString, [c.toTree()]);
     },
     //@ts-ignore
-    ObjectAndBodyStatement(a,b){
-        let o = a.toTree()
-        let body = b.toTree()
-        return new treeNode(NodeType.ObjectWithBody, "owithn",[o,body])
+    Transformation(a,b){
+        return new treeNode(NodeType.Transformation, b.sourceString, [b.toTree()]);
     },
-    //@ts-ignore
-    ProcBody(a,b,c) {
-        return new treeNode(NodeType.ProcBody, "procBody",b.children.map(x=>x.toTree()))
+    AppendOperation(a,b){
+        return new treeNode(NodeType.Append,b.sourceString, [b.toTree()])
+    },
+    PushOperation(a,b){
+        return new treeNode(NodeType.Push,a.sourceString, [a.toTree()])
+    },
+    PopOperation(a,){
+
     },
      //@ts-ignore
      number(n) {
