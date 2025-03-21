@@ -9,7 +9,7 @@ enum NodeType {
     DefineElement,
     BodyStatement,
     Transformation,
-    ObjectWithBody
+    Procedure
 }
 
 class treeNode {
@@ -25,4 +25,14 @@ class treeNode {
     }
 }
 
-export {NodeType, treeNode}
+class Procedure{
+    type: NodeType = NodeType.Procedure
+    id: string
+    statements: treeNode[] = []
+    constructor(id: string, statements: treeNode[]){
+        this.id = id
+        this.statements = statements
+    }
+}
+
+export {NodeType, treeNode, Procedure}

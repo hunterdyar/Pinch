@@ -1,17 +1,18 @@
 import { env } from "bun";
-import { NodeType, treeNode } from "./ast";
+import { NodeType, treeNode, Procedure } from "./ast";
 
 class Environment  {
     width: Number = 256
     height: Number = 256
+    active: Context
     stack: Context[] = []
-    baseSVG: Context = null
+    baseSVG: Context
     defaults: Dict<string> = {
         "stroke": "black",
         "fill": "lightgrey",
         "stroke-width": "5",
     }
-    definitions: Dict<treeNode[]> = {} 
+    definitions: Dict<Procedure> = {} 
     debug: string[] = []
 
     push(i:Context){
@@ -34,20 +35,22 @@ class Environment  {
             return this.baseSVG
         }
         
-        let x= this.stack[this.stack.length-1]
+        let x = this.stack[this.stack.length-1]
         if(x){
             return x
         }else{
+            console.log("bad stack, cant peek.",this.stack);
             throw new Error("cannot peek")
         }
     }
-    addDefinition(identifier: string, body: treeNode[]){
+    addAndPushDefinition(identifier: string, body: treeNode[]){
         this.debug.push("def "+identifier)
         if(identifier in this.definitions){
             throw new Error("Can't define "+identifier+" . It is already defined.");
         }
 
-        this.definitions[identifier] = body
+        this.definitions[identifier] = new Procedure(identifier, body);
+        this.push(this.definitions[identifier])
     }
     hasDefinition(identifier: string):boolean{
         return identifier in this.definitions
@@ -57,7 +60,7 @@ class Environment  {
         this.debug.push("get def "+identifier)
         let x = this.definitions[identifier]
         if(x != undefined){
-            return x;
+            return x.statements;
         }else{
             throw new Error("Invlid definition lookup. "+identifier)
         }
@@ -80,7 +83,7 @@ class Environment  {
 
 }
 //todo: wrapper class with context types
-type Context = HTMLElement | SVGElement | Number | string 
+type Context = HTMLElement | SVGElement | Number | string | Procedure
 
 function compileAndRun(root: treeNode): SVGElement{
     let svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
@@ -125,28 +128,53 @@ function compile(node:treeNode, env: Environment){
         case NodeType.Identifier:
             return node.id
         case NodeType.ObjectStatement:
+            console.log("os", node);
             compileStandaloneObjectStatement(node,env) 
             break;
         case NodeType.Transformation:
-            node.children.forEach(x=>{
-                compileTransformation(x,env)
-            });
+            let ctx = env.peek();
+            if(ctx != null){
+                if(ctx.type == NodeType.Procedure){
+                    console.log("holding onto this transform node until later!");
+                    ctx.statements.push(node);
+                }else{
+                    node.children.forEach(x=>{
+                        compileTransformation(x,env)
+                    });
+                }
+            }
+            
             break;
         case NodeType.BodyStatement:
             break;
         case NodeType.Append:
             //add to current object.
-            compile(node.children[0],env)
+            let c = env.peek();
+            console.log("append onto...",c);
+            if(c != null){
+                if(c.type == NodeType.Procedure){
+                    console.log("holding onto this node until later!");
+                    c.statements.push(node);
+                }else{
+                    compile(node.children[0],env);
+                    (c as HTMLElement).appendChild(env.active);
+                }
+            }else{
+                throw new Error("Cannot Append Nothing")
+            }
             break;
         case NodeType.Push:
-            let o = compile(node.children[0],env)
-            env.push(o); 
+            compile(node.children[0], env)
+            console.log("push ",env.active);
+            env.push(env.active); 
             break;
-        case NodeType.Pop():
+        case NodeType.Pop:
             env.pop();
             break;
         case NodeType.DefineElement:            
-            env.addDefinition(node.id,node.children)
+            //todo: the stack needs to become our empty container for more statements.
+            let def: treeNode[] = []
+            env.addAndPushDefinition(node.id,def)
             break;
         default: 
             console.log("unhandled:",node)
@@ -174,11 +202,8 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
             d.setAttribute("fill",env.getDefault("fill"))
             d.setAttribute("stroke-width", env.getDefault("stroke-width"))
 
-
-            c = env.peek();
-            (c as HTMLElement).appendChild(d);
             env.debug.push("circle")
-            env.push(d)
+            env.active = d
             
             break;
         case "rect":
@@ -205,10 +230,9 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
             d.setAttribute("stroke-width", env.getDefault("stroke-width"))
 
 
-            c = env.peek();
-            (c as HTMLElement).appendChild(d);
+        
             env.debug.push("rect")
-            env.push(d)
+            env.active = d
             break;
         //Static Function Calls...
         case "width":
@@ -318,4 +342,7 @@ function compileTransformation(node:treeNode, env: Environment){
             }
     }
 }
-    export{ compileAndRun}
+
+
+
+export{ compileAndRun}

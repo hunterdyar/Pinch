@@ -13,7 +13,6 @@ s.addOperation("toTree",{
     Program(s,_) {return new treeNode(NodeType.Program, "program",s.children.map(x=>x.toTree()))},
     //@ts-ignore
     objectStatement(ident,w,c) {
-        console.log("os");
         let parameters = c.asIteration().children.map(x=>x.toTree())
         return new treeNode(NodeType.ObjectStatement,ident.sourceString,parameters)
     },
@@ -24,7 +23,8 @@ s.addOperation("toTree",{
     },
     //@ts-ignore
     DefineNamedStatement(a,b,c) {
-        return new treeNode(NodeType.DefineElement,b.sourceString, [c.toTree()]);
+        console.log("def",a,b,c)
+        return new treeNode(NodeType.DefineElement,b.sourceString, []);
     },
     //@ts-ignore
     Transformation(a,b){
@@ -36,8 +36,8 @@ s.addOperation("toTree",{
     PushOperation(a,b){
         return new treeNode(NodeType.Push,a.sourceString, [a.toTree()])
     },
-    PopOperation(a,){
-
+    PopOperation(a){
+        return new treeNode(NodeType.Pop,"pop",[]);
     },
      //@ts-ignore
      number(n) {

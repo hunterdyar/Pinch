@@ -10,7 +10,7 @@ const output = document.getElementById("outputContainer") as HTMLDivElement
 const rawoutput = document.getElementById("rawContainer") as HTMLTextAreaElement
 const errorp = document.getElementById("errorArea") as HTMLParagraphElement
 
-const startingCode = "circle 50 >\n| x 75\n| y 75\n. "
+const startingCode = "def center > \n| x 75\n| y 75\n. \n \n \n + circle 50 > \n | fill blue\n ."
 
 const drawSVGOnChangePlugin = ViewPlugin.fromClass(class {
     constructor(view) {
