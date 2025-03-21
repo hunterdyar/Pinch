@@ -1,5 +1,6 @@
 import { env } from "bun";
 import { NodeType, treeNode, Procedure, RuntimeNode, CreateElementNode, CreateProcedureNode, RuntimeType } from "./ast";
+import { getSignature } from "./methodSigs";
 
 
 class Environment  {
