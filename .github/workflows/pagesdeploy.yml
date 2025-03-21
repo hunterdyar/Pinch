@@ -23,13 +23,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
 
-      # run any `bun` or `bunx` command
-      - run: bun build ./index.html --outdir=./bin/
+      - name: bun-build
+        run: bun build ./index.html --outdir=./bin/
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v1
+        uses: actions/upload-pages-artifact@v3
         with:
-          path: ./bin/
+          path: ./bin
 
             # Deployment job
   deploy:
@@ -41,4 +41,4 @@ jobs:
     steps:
     - name: "Deploy to GitHub Pages"
       id: deployment
-      uses: actions/deploy-pages@v1
+      uses: actions/deploy-pages@v4
