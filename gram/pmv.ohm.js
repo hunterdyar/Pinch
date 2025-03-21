@@ -37,63 +37,63 @@ bodyDelim = ("\\n" | ";")
                  | "\u200C" | "\u200D"
 	
 
-    sc = space* (";" | end)
+sc = space* (";" | end)
      | spacesNoNL (lineTerminator | &".")
 
-    doProc = ">"
-    stopProc = "." ~digit
+    doPush = ">"
+    doPop = "." ~digit
+    doAppend = "+"
+    doAlter = "#" | "^"
+ 	pipe = "|"
+    
+    operator = doPush | doPop | doAlter | pipe | doAppend
+
     define = "def"
 
-    ProcBody = 
-    doProc BodyStatement stopProc
-    | doProc BodyStatement* stopProc
-
-	DefineElementStatement =
-    define ident ProcBody
+	DefineNamedStatement =
+    define ident doPush
 
 	literal = 
-    ~stopProc ident
-    | ~stopProc number
-  
-   Statement =
-  Procedure
-  | ObjectAndBodyStatement
-  | DefineElementStatement
+    ~operator ident
+    | ~operator number
+    
+    Statement = 
+    MetaStatement
+|   ObjectStatement
+    
+  ObjectStatement =
+  | DefineNamedStatement
+  | Transformation
+  | AppendOperation
   | objectStatement
+  
+   MetaStatement =
+  | PushOperation
+  | PopOperation
 
-ObjectAndBodyStatement =
-objectStatement ProcBody
+PopOperation =
+doPop
 
 objectStatement =
 //| ident Object #sc?
-
 | ident whitespace? listOf<object,whitespace>
     
-    BodyStatement =
-    Transformation
-    | ObjectAndBodyStatement
-    | objectStatement
- 
-    
-    Procedure
-    = 
-     ProcBody
-    
-    object
-    = ident 
-    | literal
-    
-    
+    PushOperation =
+    (ObjectStatement | AppendOperation) doPush
+    AppendOperation =
+    doAppend objectStatement
     Transformation
     = pipe objectStatement
-
-	pipe = "|"
+   
+    object
+    = ~operator ident 
+    | ~operator literal
 
   ident  (an identifier)
     = ~reservedKeyword letter ("-" | "_" | alnum)* 
     
     reservedKeyword =
-    define
+    operator | define
 
   number  (a number)
     = "-"? digit* "." digit+  -- fract

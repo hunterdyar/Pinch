@@ -29,7 +29,7 @@
             "type": "bun",
             "request": "attach",
             "name": "Attach Bun",
-            "url": "ws://localhost:6499/",
+            "url": "ws://localhost:3000/",
             "stopOnEntry": false,
             "internalConsoleOptions": "neverOpen"
         }

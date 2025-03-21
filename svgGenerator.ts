@@ -1,49 +1,66 @@
 import { env } from "bun";
-import { NodeType, treeNode } from "./ast";
-import { getSignature } from "./methodSigs";
+import { NodeType, treeNode, Procedure, RuntimeNode, CreateElementNode, CreateProcedureNode, RuntimeType } from "./ast";
+
 
 class Environment  {
     width: Number = 256
     height: Number = 256
-    stack: Context[] = []
+    active: RuntimeNode | null = null
+    stack: RuntimeNode[] = []
+    baseSVG: SVGElement
     defaults: Dict<string> = {
         "stroke": "black",
         "fill": "lightgrey",
         "stroke-width": "5",
     }
-    definitions: Dict<treeNode[]> = {} 
+    definitions: Dict<Procedure> = {} 
     debug: string[] = []
 
-    push(i:Context){
-        this.debug.push("push")
-        let b4 = this.stack.length
-        this.stack.push(i)
+    constructor(root: SVGSVGElement){
+        this.baseSVG = root;
+     }
+    push(i:RuntimeNode | null){
+        if(i != null){
+            this.debug.push("push")
+            let b4 = this.stack.length
+            this.stack.push(i)
+        }else{
+            this.debug.push("[x pushed null]")
+        }
     }
-    pop():Context{
+    pop():RuntimeNode{
         this.debug.push("pop")
         let x= this.stack.pop();
         if(x){
             return x
         }else{
-            console.log("error in stack",this.stack)
-            throw new Error("cannot pop")
+            console.log("popped empty stack!",this.stack)
+            return this.baseSVG
         }
     }
-    peek():Context{
-        let x= this.stack[this.stack.length-1]
+    peek():RuntimeNode{
+        if(this.stack.length == 0){
+            throw new Error("Empty Stack!")
+            //return this.baseSVG
+        }
+        
+        let x = this.stack[this.stack.length-1]
         if(x){
             return x
         }else{
-            throw new Error("cannot pop")
+            console.log("bad stack, cant peek.",this.stack);
+            throw new Error("cannot peek")
         }
     }
-    addDefinition(identifier: string, body: treeNode[]){
+    addAndPushDefinition(identifier: string, body: treeNode[]){
         this.debug.push("def "+identifier)
         if(identifier in this.definitions){
             throw new Error("Can't define "+identifier+" . It is already defined.");
         }
 
-        this.definitions[identifier] = body
+        //todo: two wrapper functions basically...
+        this.definitions[identifier] = new Procedure(identifier, body);
+        this.push(CreateProcedureNode(this.definitions[identifier]))
     }
     hasDefinition(identifier: string):boolean{
         return identifier in this.definitions
@@ -53,7 +70,7 @@ class Environment  {
         this.debug.push("get def "+identifier)
         let x = this.definitions[identifier]
         if(x != undefined){
-            return x;
+            return x.statements;
         }else{
             throw new Error("Invlid definition lookup. "+identifier)
         }
@@ -75,28 +92,20 @@ class Environment  {
     }
 
 }
-//todo: wrapper class with context types
-type Context = HTMLElement | SVGElement | Number | string 
 
 function compileAndRun(root: treeNode): SVGElement{
     let svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
-    let environment = new Environment()
-    environment.push(svg)
+    let environment = new Environment(svg)
+    environment.push(CreateElementNode(svg))
 
     if(root.type != NodeType.Program){
         throw new Error("invalid root object. trying anyway...")
     }
     root.children.forEach(child => {
-        environment.debug.push("\n|root \n")
         //@ts-ignore
         compile(child, environment);
         environment.printdebug()
 
-        if(environment.stack.length >= 2){
-            environment.pop()
-        }else{
-            console.log("protecting last item on stack.")
-        }
     });
 
     if(environment.stack.length != 1){
@@ -113,7 +122,7 @@ function compileAndRun(root: treeNode): SVGElement{
 
 function compile(node:treeNode, env: Environment){
     if(!node){
-        return null
+        throw new Error("Can't compile nothing!")
     }
     switch(node.type){
         case NodeType.Number:
@@ -122,30 +131,61 @@ function compile(node:treeNode, env: Environment){
             return node.id
         case NodeType.ObjectStatement:
             compileStandaloneObjectStatement(node,env) 
+
+            //append! let empty object statements be equivalent to append.
+            //todo: i want to move that logic to the lexer.
+            if(env.active != null){
+                let c = env.peek();
+                if(c != null){
+                    console.log("appending during default context")
+                    c.appendChildElement(env.active)
+                }
+            }   
             break;
         case NodeType.Transformation:
-            node.children.forEach(x=>{
-                compileTransformation(x,env)
-            });
-            break;
-        case NodeType.BodyStatement:
-            break;
-        case NodeType.ObjectWithBody:
-            env.debug.push("owb")
-            if(node.children.length != 2){
-                throw new Error("bad Object with Body Format")
+            let ctx = env.peek();
+            if(ctx != null){
+                if(ctx.type == RuntimeType.Procedure){
+                    console.log("holding onto this transform node until later!");
+                    ctx.procudureValue?.statements.push(node);
+                }else if (ctx.type == RuntimeType.Element){
+                    node.children.forEach(x=>{
+                        compileTransformation(x,env)
+                    });
+                }else if(ctx.type == RuntimeType.Group){
+                    console.log("Groups not yet supported.")
+                }else{
+                    throw new Error("Can't apply transformation to "+node.type.toString())
+                }
             }
-            compile(node.children[0],env)
-            compile(node.children[1],env)
-           // env.pop()//the . clears the stack basically.
+            
             break;
-        case NodeType.ProcBody:
-            node.children.forEach(x=>{
-                compile(x,env)  
-            })
+        case NodeType.Append:
+            //add to current object.
+            let c = env.peek();
+            if(c != null){
+                if(c.type == RuntimeType.Procedure){
+                    console.log("holding onto this node until later!");
+                    c.procudureValue?.statements.push(node);
+                }else if (c.type == RuntimeType.Element){
+                    compile(node.children[0],env);
+                    c.appendChildElement(env.active);
+                }
+            }else{
+                throw new Error("Cannot Append Nothing")
+            }
             break;
-        case NodeType.DefineElement:            
-            env.addDefinition(node.id,node.children)
+        case NodeType.Push:
+            compile(node.children[0], env)
+            env.push(env.active); 
+            break;
+        case NodeType.Pop:
+            env.pop();
+            break;
+        case NodeType.DefineProcedureNode:            
+            //todo: the stack needs to become our empty container for more statements.
+            let def: treeNode[] = []
+            env.addAndPushDefinition(node.id,def)
             break;
         default: 
             console.log("unhandled:",node)
@@ -154,8 +194,8 @@ function compile(node:treeNode, env: Environment){
 }
 
 function compileStandaloneObjectStatement(node:treeNode, env: Environment){
+    env.active = null;
     let d: SVGElement
-    let c: Context
     switch(node.id){
         case "circle":
             //todo: boilerplate out the d element code.
@@ -184,11 +224,8 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
             d.setAttribute("fill",env.getDefault("fill"))
             d.setAttribute("stroke-width", env.getDefault("stroke-width"))
 
-
-            c = env.peek();
-            (c as HTMLElement).appendChild(d);
             env.debug.push("circle")
-            env.push(d)
+            env.active = CreateElementNode(d)
             
             break;
         case "rect":
@@ -216,12 +253,9 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
             d.setAttribute("stroke",env.getDefault("stroke"))
             d.setAttribute("fill",env.getDefault("fill"))
             d.setAttribute("stroke-width", env.getDefault("stroke-width"))
-
-
-            c = env.peek();
-            (c as HTMLElement).appendChild(d);
+        
             env.debug.push("rect")
-            env.push(d)
+            env.active = CreateElementNode(d)
             break;
         //Static Function Calls...
         case "width":
@@ -247,10 +281,10 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
             return;
         default:
             //variable lookup!            
-            tryRunVariableLookup(node.id,env)
+            if(!tryRunVariableLookup(node.id,env)){
+                console.log("Warning. Unknown standalone object statement "+node.id)
+            }
         }
-
-        //this is down here just so we don't have to keep writing it.
         
     //
 }
@@ -263,75 +297,114 @@ function tryRunVariableLookup(id: string, env:Environment):boolean{
         body.forEach(x=>{
             compile(x,env);
         });
-        //pop? push?
+
         return true
     }
     return false
 }
 
 function compileTransformation(node:treeNode, env: Environment){
-    let context = env.peek()
+    let contextNode = env.peek()
+    if(contextNode.type != RuntimeType.Element){
+        throw new Error("Can't compile context on type "+contextNode.type.toString()+". Groups not yet supported.")
+    }
+    let context = contextNode.elementValue;
+    if(context == null || context == undefined){
+        return;
+    }
     switch(node.id){
         case "fill":
-            context.setAttribute("fill",compile(node.children[0]))
+            context.setAttribute("fill",compile(node.children[0],env))
             break
         case "radius":
-            context.setAttribute("r",compile(node.children[0]))
+            context.setAttribute("r",compile(node.children[0],env))
             break;
         case "x":
+            setX(context,compile(node.children[0],env))
+            break;
         case "cx":
             //todo: determine if we need to update x or cx
-        context.setAttribute("cx",compile(node.children[0]))
-        context.setAttribute("x",compile(node.children[0]))
-
+            setX(context,compile(node.children[0],env))
             break;
         case "y":
+            setY(context, compile(node.children[0],env))
+            break;
         case "cy":
             //todo: determine if we need to update y or cy. We can check if context is a circle, or if it has a cx attribute.
-        context.setAttribute("cy",compile(node.children[0]))
-        context.setAttribute("y",compile(node.children[0]))
-
+            setY(context, compile(node.children[0],env))
             break;
         case "stroke-width":
         case "sw":
             console.log("sw")
-            context.setAttribute("stroke-width",compile(node.children[0]))
+            context.setAttribute("stroke-width",compile(node.children[0],env))
             break;
         case "translate":
-            let x = parseFloat(compile(node.children[0]))
-            let y = parseFloat(compile(node.children[1]))
+            let x = parseFloat(compile(node.children[0],env))
+            let y = parseFloat(compile(node.children[1],env))
     
-
-            let ex = parseFloat(context.getAttribute("cx"))
-            let ey = parseFloat(context.getAttribute("cy"))
+            let ex = parseFloat(getAttribute(context,"x","0"))
+            let ey = parseFloat(getAttribute(context,"y","0"))
             if(x == null || y==null)
             {
                 console.log("translate ",x,y)
                 throw new Error("bad properties for translate");
             }
-            if(!ex)
-            {
-                ex = 0
-            }
-            if(!ey)
-            {
-                ey = 0
-            }
 
-            context.setAttribute("cx",x+ex)
-            context.setAttribute("cy",y+ey)
-
+            setX(context,x+ex)
+            setY(context,y+ey)
+        
             break;
         default:
             if(!tryRunVariableLookup(node.id,env)){
                 let attr = node.id
                 let val = compile(node.children[0],env)
                 console.log("unenforced attribute:",attr,val)
-                context.setAttribute(attr,val)
+                if(val){
+                    context.setAttribute(attr,val)
+                }
             }
     }
 }
 
+function getAttribute(element: SVGElement, attr: Number | string, fallback: Number | string = "") : string{
+    //check x/cx y/cy variations.
+    if(attr == "x" || attr == "y"){
+        if(element.nodeName == "circle" || element.nodeName == "ellipse" || element.nodeName == "radialGradient"){
+            attr = "c"+attr;
+        }
+    }
+    if(element.hasAttribute(attr.toString())){
+        let a = element.getAttribute(attr.toString())
+        if(a){ return a}
+        return fallback.toString()
+    }else{
+        return fallback.toString()
+    }
+}
+
+function setX(element: SVGElement, value: Number |string){
+    switch(element.nodeName){
+        case "circle":
+        case "ellipse":
+        case "radialGradient":
+            element.setAttribute("cx",value.toString());
+        break;
+        default:
+            element.setAttribute("x",value.toString())
+    }
+}
+
+function setY(element: SVGElement, value: Number | string){
+    switch(element.nodeName){
+        case "circle":
+        case "ellipse":
+        case "radialGradient":
+            element.setAttribute("cy",value.toString());
+        break;
+        default:
+        element.setAttribute("y",value.toString())
+    }
+}
 
 
 export{ compileAndRun}

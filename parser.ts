@@ -22,18 +22,22 @@ s.addOperation("toTree",{
         return new treeNode(NodeType.Transformation,"|",[os]);
     },
     //@ts-ignore
-    DefineElementStatement(a,b,c) {
-        return new treeNode(NodeType.DefineElement,b.sourceString,c.toTree().children);
+    DefineNamedStatement(a,b,c) {
+        console.log("def",a,b,c)
+        return new treeNode(NodeType.DefineProcedureNode,b.sourceString, []);
     },
     //@ts-ignore
-    ObjectAndBodyStatement(a,b){
-        let o = a.toTree()
-        let body = b.toTree()
-        return new treeNode(NodeType.ObjectWithBody, "owithn",[o,body])
+    Transformation(a,b){
+        return new treeNode(NodeType.Transformation, b.sourceString, [b.toTree()]);
     },
-    //@ts-ignore
-    ProcBody(a,b,c) {
-        return new treeNode(NodeType.ProcBody, "procBody",b.children.map(x=>x.toTree()))
+    AppendOperation(a,b){
+        return new treeNode(NodeType.Append,b.sourceString, [b.toTree()])
+    },
+    PushOperation(a,b){
+        return new treeNode(NodeType.Push,a.sourceString, [a.toTree()])
+    },
+    PopOperation(a){
+        return new treeNode(NodeType.Pop,"pop",[]);
     },
      //@ts-ignore
      number(n) {
