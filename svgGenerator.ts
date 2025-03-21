@@ -1,4 +1,3 @@
-import { env } from "bun";
 import { NodeType, treeNode, Procedure, RuntimeNode, CreateElementNode, CreateProcedureNode, RuntimeType } from "./ast";
 import { getSignature } from "./methodSigs";
 
@@ -8,6 +7,7 @@ class Environment  {
     height: Number = 256
     active: RuntimeNode | null = null
     stack: RuntimeNode[] = []
+    frames: Dict<RuntimeNode>[] = [] 
     baseSVG: SVGElement
     defaults: Dict<string> = {
         "stroke": "black",
@@ -36,7 +36,7 @@ class Environment  {
             return x
         }else{
             console.log("popped empty stack!",this.stack)
-            return this.baseSVG
+            return CreateElementNode(this.baseSVG)
         }
     }
     peek():RuntimeNode{
@@ -91,7 +91,49 @@ class Environment  {
         let s = this.debug.reduce((s,x)=>s+x+", ")
         console.log(s);
     }
-
+    pushFrame(){
+        let f = {}
+        this.frames.push(f)
+    }
+    popFrame()
+    {
+        if(this.frames.length >= 1){
+            this.frames.pop()
+        }else{
+            throw new Error("Can't Pop Frame")
+        }
+    }
+    setLocal(id: string, val: RuntimeNode){
+        if(this.frames.length >= 1){
+            let frame = this.frames[this.frames.length-1];
+            if(frame != undefined){
+                frame[id] = val
+            }
+        }else{
+            throw new Error("Can't Set Local, there is no local frame. should I set global?")
+        }
+    }
+    getLocal(id: string): RuntimeNode
+    {
+        if(this.frames.length >= 1){
+            let frame = this.frames[this.frames.length-1];
+            if(frame != undefined && frame[id]){
+                return frame[id]
+            }
+        }else{
+            throw new Error("Can't Get Local, there is no local frame")
+        }
+        throw new Error("Unable to get local property "+id);
+    }
+    getLocalOrNull(id: string): RuntimeNode | null{
+        if(this.frames.length >= 1){
+            let frame = this.frames[this.frames.length-1];
+            if(frame != undefined && frame[id]){
+                return frame[id]
+            }
+        }
+        return null;
+    }
 }
 
 function compileAndRun(root: treeNode): SVGElement{
@@ -105,12 +147,11 @@ function compileAndRun(root: treeNode): SVGElement{
     root.children.forEach(child => {
         //@ts-ignore
         compile(child, environment);
-        environment.printdebug()
-
     });
+    environment.printdebug()
 
     if(environment.stack.length != 1){
-        throw new Error("not all pushes got popped, for context stack. stack is "+environment.stack.length);
+        throw new Error("The stack is "+environment.stack.length+". It should end at 1 (root svg)");
     }
     environment.stack.pop();
 
@@ -147,7 +188,6 @@ function compile(node:treeNode, env: Environment){
             let ctx = env.peek();
             if(ctx != null){
                 if(ctx.type == RuntimeType.Procedure){
-                    console.log("holding onto this transform node until later!");
                     ctx.procudureValue?.statements.push(node);
                 }else if (ctx.type == RuntimeType.Element){
                     node.children.forEach(x=>{
@@ -166,7 +206,6 @@ function compile(node:treeNode, env: Environment){
             let c = env.peek();
             if(c != null){
                 if(c.type == RuntimeType.Procedure){
-                    console.log("holding onto this node until later!");
                     c.procudureValue?.statements.push(node);
                 }else if (c.type == RuntimeType.Element){
                     compile(node.children[0],env);
@@ -263,7 +302,6 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
             if(node.children.length == 0)
             {
                 //variable accessor! not a thing that we have right now...
-                
             }
             let w = compile(node.children[0],env)
             if(w){
@@ -281,8 +319,8 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
             }
             return;
         default:
-            //variable lookup!            
-            if(!tryRunVariableLookup(node.id,env)){
+            //def lookup!            
+            if(!tryRunDefinitionLookup(node.id,env)){
                 console.log("Warning. Unknown standalone object statement "+node.id)
             }
         }
@@ -290,7 +328,7 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
     //
 }
 
-function tryRunVariableLookup(id: string, env:Environment):boolean{
+function tryRunDefinitionLookup(id: string, env:Environment):boolean{
     if(env.hasDefinition(id)){
         //push?
 
@@ -356,7 +394,7 @@ function compileTransformation(node:treeNode, env: Environment){
         
             break;
         default:
-            if(!tryRunVariableLookup(node.id,env)){
+            if(!tryRunDefinitionLookup(node.id,env)){
                 let attr = node.id
                 let val = compile(node.children[0],env)
                 console.log("unenforced attribute:",attr,val)

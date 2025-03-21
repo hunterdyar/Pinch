@@ -6,24 +6,52 @@
            svg {
             border: 1px solid black;
            }
+           .editor{
+            display: grid;
+            grid-template-columns:auto auto;
+           }
+           .textentry{
+            margin-right: 10px;
+            grid-column-start: 0;
+            grid-column-end: 1;
+           }
+           .output{
+            margin-left: 5px;
+            padding-left: 5px;
+            border-left: 1px gray solid;
+            grid-column-start: 1;
+            grid-column-end: 2;
+           }
+           #outputContainer{
+            display: block;
+            height:400px
+           }
         </style>
     </head>
 
-    <body>
+    <body><article>
         <section>
+            <section class="header"></section>
         <p>pipes n vecs</p>
-        <div id="inputContainer" style="width: 820px">
-        </div>
-        <div style="display: block; height:400px">
-            <div id ="outputContainer" >
-                
+        </section>
+        <section class="editor">
+            <section class="textentry">
+                <div id="inputContainer">
+                </div>
+                <div>
+                    <p id="errorArea"></p>
+                </div>
+                <textarea id ="rawContainer"></textarea>
+            </section>
+        <section class="output">
+            <div>
+                <div id ="outputContainer" >
+                </div>
             </div>
-        </div>
-        <div>
-            <p id="errorArea"></p>
-        </div>
-        <textarea id ="rawContainer" style=""></textarea>
+        </section>
     </section>
+    </section>
+    </article>
         <!-- <script src="ast.js"></script> -->
         <script src="./interactivePage.ts" type="module"></script>
     </body>
