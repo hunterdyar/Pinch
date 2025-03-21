@@ -290,18 +290,18 @@ function compileTransformation(node:treeNode, env: Environment){
             context.setAttribute("r",compile(node.children[0]))
             break;
         case "x":
+            setX(context,compile(node.children[0]))
+            break;
         case "cx":
             //todo: determine if we need to update x or cx
-        context.setAttribute("cx",compile(node.children[0]))
-        context.setAttribute("x",compile(node.children[0]))
-
+            setX(context,compile(node.children[0]))
             break;
         case "y":
+            setY(context, compile(node.children[0]))
+            break;
         case "cy":
             //todo: determine if we need to update y or cy. We can check if context is a circle, or if it has a cx attribute.
-        context.setAttribute("cy",compile(node.children[0]))
-        context.setAttribute("y",compile(node.children[0]))
-
+            setY(context, compile(node.children[0]))
             break;
         case "stroke-width":
         case "sw":
@@ -312,25 +312,16 @@ function compileTransformation(node:treeNode, env: Environment){
             let x = parseFloat(compile(node.children[0]))
             let y = parseFloat(compile(node.children[1]))
     
-
-            let ex = parseFloat(context.getAttribute("cx"))
-            let ey = parseFloat(context.getAttribute("cy"))
+            let ex = parseFloat(getAttribute(context,"x","0"))
+            let ey = parseFloat(getAttribute(context,"y","0"))
             if(x == null || y==null)
             {
                 console.log("translate ",x,y)
                 throw new Error("bad properties for translate");
             }
-            if(!ex)
-            {
-                ex = 0
-            }
-            if(!ey)
-            {
-                ey = 0
-            }
 
-            context.setAttribute("cx",x+ex)
-            context.setAttribute("cy",y+ey)
+            setX(context,x+ex)
+            setY(context,y+ey)
 
             break;
         default:
@@ -343,6 +334,43 @@ function compileTransformation(node:treeNode, env: Environment){
     }
 }
 
+function getAttribute(element: Context, attr: string, fallback: string | null = null){
+    //check x/cx y/cy variations.
+    if(attr == "x" || attr == "y"){
+        if(element.nodeName == "circle" || element.nodeName == "ellipse" || element.nodeName == "radialGradient"){
+            attr = "c"+attr;
+        }
+    }
+    if(element.hasAttribute(attr)){
+        return element.getAttribute(attr)
+    }else{
+        return fallback
+    }
+}
+
+function setX(element: Context, value: string){
+    switch(element.nodeName){
+        case "circle":
+        case "ellipse":
+        case "radialGradient":
+            element.setAttribute("cx",value);
+        break;
+        default:
+        element.setAttribute("x",value)
+    }
+}
+
+function setY(element: Context, value: string){
+    switch(element.nodeName){
+        case "circle":
+        case "ellipse":
+        case "radialGradient":
+            element.setAttribute("cy",value);
+        break;
+        default:
+        element.setAttribute("y",value)
+    }
+}
 
 
 export{ compileAndRun}
