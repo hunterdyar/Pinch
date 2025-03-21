@@ -110,7 +110,7 @@ class Environment  {
                 frame[id] = val
             }
         }else{
-            throw new Error("Can't Set Local, there is no local frame. should I set global?")
+            throw new Error("Can't Set Local, there is no local frame.")
         }
     }
     getLocal(id: string): RuntimeNode
@@ -318,6 +318,9 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
                 console.log("cannot parse height:",h)
             }
             return;
+        case "repeat":
+            let count = compile(node.children[0],env)
+            console.log("repeat ",count)
         default:
             //def lookup!            
             if(!tryRunDefinitionLookup(node.id,env)){
