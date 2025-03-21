@@ -4,7 +4,7 @@ import { NodeType, treeNode, Procedure } from "./ast";
 class Environment  {
     width: Number = 256
     height: Number = 256
-    active: Context
+    active: Context | null = null
     stack: Context[] = []
     baseSVG: Context
     defaults: Dict<string> = {
@@ -128,8 +128,16 @@ function compile(node:treeNode, env: Environment){
         case NodeType.Identifier:
             return node.id
         case NodeType.ObjectStatement:
-            console.log("os", node);
             compileStandaloneObjectStatement(node,env) 
+
+            //append! let empty object statements be equivalent to append.
+            //todo: i want to move that logic to the lexer.
+            if(env.active != null){
+                let c = env.peek();
+                if(c != null){
+                    (c as HTMLElement).appendChild(env.active);
+                }
+            }   
             break;
         case NodeType.Transformation:
             let ctx = env.peek();
@@ -145,12 +153,9 @@ function compile(node:treeNode, env: Environment){
             }
             
             break;
-        case NodeType.BodyStatement:
-            break;
         case NodeType.Append:
             //add to current object.
             let c = env.peek();
-            console.log("append onto...",c);
             if(c != null){
                 if(c.type == NodeType.Procedure){
                     console.log("holding onto this node until later!");
@@ -165,13 +170,12 @@ function compile(node:treeNode, env: Environment){
             break;
         case NodeType.Push:
             compile(node.children[0], env)
-            console.log("push ",env.active);
             env.push(env.active); 
             break;
         case NodeType.Pop:
             env.pop();
             break;
-        case NodeType.DefineElement:            
+        case NodeType.DefineProcedureNode:            
             //todo: the stack needs to become our empty container for more statements.
             let def: treeNode[] = []
             env.addAndPushDefinition(node.id,def)
@@ -183,6 +187,7 @@ function compile(node:treeNode, env: Environment){
 }
 
 function compileStandaloneObjectStatement(node:treeNode, env: Environment){
+    env.active = null;
     let d: SVGElement
     let c: Context
     switch(node.id){

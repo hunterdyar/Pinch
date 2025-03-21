@@ -6,7 +6,7 @@ enum NodeType {
     Push,
     Pop,
     Append,
-    DefineElement,
+    DefineProcedureNode,
     BodyStatement,
     Transformation,
     Procedure

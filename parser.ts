@@ -24,7 +24,7 @@ s.addOperation("toTree",{
     //@ts-ignore
     DefineNamedStatement(a,b,c) {
         console.log("def",a,b,c)
-        return new treeNode(NodeType.DefineElement,b.sourceString, []);
+        return new treeNode(NodeType.DefineProcedureNode,b.sourceString, []);
     },
     //@ts-ignore
     Transformation(a,b){
