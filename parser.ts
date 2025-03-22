@@ -30,12 +30,15 @@ s.addOperation("toTree",{
     Transformation(a,b){
         return new treeNode(NodeType.Transformation, b.sourceString, [b.toTree()]);
     },
+    //@ts-ignore
     AppendOperation(a,b){
         return new treeNode(NodeType.Append,b.sourceString, [b.toTree()])
     },
+    //@ts-ignore
     PushOperation(a,b){
         return new treeNode(NodeType.Push,a.sourceString, [a.toTree()])
     },
+    //@ts-ignore
     PopOperation(a){
         return new treeNode(NodeType.Pop,"pop",[]);
     },

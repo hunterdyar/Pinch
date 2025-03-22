@@ -319,8 +319,46 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
             }
             return;
         case "repeat":
-            let count = compile(node.children[0],env)
-            console.log("repeat ",count)
+            //repeat (@name identifier) start(0) stop step(1)
+            
+            //i (without the @) is usable inside of the repeat scope.
+
+            //repeat does not push to context, so appends inside of it go "through" to parents scope.
+            //repeat does, however, push the frame with the local variable.
+            let l = node.children.length;
+            if(l <= 1){
+                throw new Error("wrong number of arguments for repeat.");
+            }
+            let name = compile(node.children[0],env)
+            let start = 0;
+            let end = 0;
+            let step = 1;
+            if(l == 2){
+                //should this be int?
+                end = parseInt(compile(node.children[1],env));
+            } else if(l == 3){
+                start = parseInt(compile(node.children[1],env));
+                end = parseInt(compile(node.children[2],env));
+            }else if(l == 3){
+                start = parseInt(compile(node.children[1],env));
+                end = parseInt(compile(node.children[2],env));
+                step = parseInt(compile(node.children[3], env))
+            }
+            if(step == 0){
+                throw new Error("repeat: step cannot be 0.")
+            } else if(start > end && step > 0){
+                throw new Error("repeat: step moves away from end.")
+            }else if(start < end && step < 0){
+                throw new Error("repeat: step moves away from end.")
+            }
+
+            //now we add an object, all it's children get added to it's context.
+            //then (OnPop callback?) it executes them x times, passing along to parent context?
+
+            //need to think this through more, how to do control flow/meta things generalized.
+
+            console.log("repeat ", start, end, step);
+            break;
         default:
             //def lookup!            
             if(!tryRunDefinitionLookup(node.id,env)){
