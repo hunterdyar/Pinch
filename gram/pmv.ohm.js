@@ -37,16 +37,21 @@ bodyDelim = ("\\n" | ";")
                  | "\u200C" | "\u200D"
 	
 
+	
 sc = space* (";" | end)
      | spacesNoNL (lineTerminator | &".")
 
     doPush = ">"
     doPop = "." ~digit
     doAppend = "+"
-    doAlter = "#" | "^"
- 	pipe = "|"
+    doAlter = "~" | "^"
+ 	doFlow = "#"
+    pipe = "|"
+    doLabel = "@"
+    startBlock = "{"
+    endBlock = "}"
     
-    operator = doPush | doPop | doAlter | pipe | doAppend
+    operator = doPush | doPop | doAlter | pipe | doAppend | doFlow | doLabel
 
     define = "def"
 
@@ -61,11 +66,15 @@ sc = space* (";" | end)
     MetaStatement
 |   ObjectStatement
     
+    StatementBlock = 
+    startBlock Statement* endBlock
+    
   ObjectStatement =
   | DefineNamedStatement
   | Transformation
   | AppendOperation
   | objectStatement
+  | FlowOperation
   
    MetaStatement =
   | PushOperation
@@ -84,10 +93,16 @@ objectStatement =
     doAppend objectStatement
     Transformation
     = pipe objectStatement
+    
+    FlowOperation =
+    doFlow objectStatement StatementBlock?
+    
+    label = doLabel ident
    
     object
     = ~operator ident 
     | ~operator literal
+    | label
 
   ident  (an identifier)
     = ~reservedKeyword letter ("-" | "_" | alnum)* 
@@ -99,7 +114,6 @@ objectStatement =
     = "-"? digit* "." digit+  -- fract
     | "-"? digit+             -- whole
     
-
 }
 `
 

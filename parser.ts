@@ -39,11 +39,29 @@ s.addOperation("toTree",{
         return new treeNode(NodeType.Push,a.sourceString, [a.toTree()])
     },
     //@ts-ignore
+    FlowOperation(a,b,c){
+        let op = b.toTree()
+        let block = []
+        if(c.children){
+            block = c.children[0].toTree()
+        }
+        return new treeNode(NodeType.Flow,op.id,[op,block]);
+    },
+    //@ts-ignore
     PopOperation(a){
         return new treeNode(NodeType.Pop,"pop",[]);
     },
+    //@ts-ignore
+    StatementBlock(a,b,c){
+        let children = b.children.map(x=>x.toTree());
+        return new treeNode(NodeType.Block,"{}",children);
+    },
+    //@ts-ignore
+    label(a,b){
+        return new treeNode(NodeType.Label,b.sourceString,[])
+    },
      //@ts-ignore
-     number(n) {
+    number(n) {
         return new treeNode(NodeType.Number,n.sourceString,[])
     },
     //@ts-ignore

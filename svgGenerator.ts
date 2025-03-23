@@ -1,4 +1,4 @@
-import { NodeType, treeNode, Procedure, RuntimeNode, CreateElementNode, CreateProcedureNode, RuntimeType } from "./ast";
+import { NodeType, treeNode, Procedure, RuntimeNode, CreateElementNode, CreateProcedureNode,CreateNumberNode, RuntimeType } from "./ast";
 import { getSignature } from "./methodSigs";
 
 
@@ -170,6 +170,10 @@ function compile(node:treeNode, env: Environment){
         case NodeType.Number:
             return node.id
         case NodeType.Identifier:
+            let local = env.getLocalOrNull(node.id);
+            if(local){
+                return local.getValue()
+            }
             return node.id
         case NodeType.ObjectStatement:
             compileStandaloneObjectStatement(node,env) 
@@ -227,10 +231,72 @@ function compile(node:treeNode, env: Environment){
             let def: treeNode[] = []
             env.addAndPushDefinition(node.id,def)
             break;
+        case NodeType.Flow:
+            compileFlowStatement(node,env);
+            break;
+        case NodeType.Block:
+            node.children.forEach(n=>{
+                compile(n,env);
+            })
+            break;
         default: 
             console.log("unhandled:",node)
     }
     return ""
+}
+
+function compileFlowStatement(node: treeNode, env: Environment){
+    let call = node.children[0];
+    let body = node.children[1];
+    switch(call.id){
+        case "repeat":
+            let l = call.children.length;
+            if(l < 1){
+                throw new Error("repeat: wrong number arguments. need at least 1")
+            }
+            let label = "_"
+            let argi = 0;
+            if(call.children[0].type == NodeType.Label){
+                label = call.children[0].id
+                argi = 1;
+            }
+
+            let start = 0;
+            let end = 0;
+            let step = 1;
+            l = l - argi;
+            if(l == 1){
+                //should this be int?
+                end = parseInt(compile(call.children[argi],env));
+            } else if(l == 2){
+                start = parseInt(compile(call.children[argi+0],env));
+                end = parseInt(compile(call.children[argi+1],env));
+            }else if(l == 3){
+                start = parseInt(compile(call.children[argi+0],env));
+                end = parseInt(compile(call.children[argi+1],env));
+                step = parseInt(compile(call.children[argi+2], env))
+            }else{
+                throw new Error("repeat: wrong number arguments. got too many.")
+            }
+
+            if(step == 0){
+                throw new Error("repeat: step cannot be 0.")
+            } else if(start > end && step > 0){
+                throw new Error("repeat: step moves away from end.")
+            }else if(start < end && step < 0){
+                throw new Error("repeat: step moves away from end.")
+            }else if(start == end){
+                console.warn("Repeat: Start and end are the same? Nothing will happen.")
+            }
+
+            env.pushFrame()
+            for(let i = start;i<end;i+=step){
+                env.setLocal(label,CreateNumberNode(i));
+                compile(body,env)
+            }
+            env.popFrame();
+        break
+    }
 }
 
 function compileStandaloneObjectStatement(node:treeNode, env: Environment){
@@ -242,7 +308,6 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
             d = document.createElementNS("http://www.w3.org/2000/svg",node.id) as SVGElement;
             //setting radius inline is optional
             var sig = getSignature(node.children.length,"circle");
-            console.log("got ",sig)
 
             for(let i = 0;i<sig.length;i++){
                 let attr = compile(node.children[i],env)
@@ -318,47 +383,7 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
                 console.log("cannot parse height:",h)
             }
             return;
-        case "repeat":
-            //repeat (@name identifier) start(0) stop step(1)
-            
-            //i (without the @) is usable inside of the repeat scope.
-
-            //repeat does not push to context, so appends inside of it go "through" to parents scope.
-            //repeat does, however, push the frame with the local variable.
-            let l = node.children.length;
-            if(l <= 1){
-                throw new Error("wrong number of arguments for repeat.");
-            }
-            let name = compile(node.children[0],env)
-            let start = 0;
-            let end = 0;
-            let step = 1;
-            if(l == 2){
-                //should this be int?
-                end = parseInt(compile(node.children[1],env));
-            } else if(l == 3){
-                start = parseInt(compile(node.children[1],env));
-                end = parseInt(compile(node.children[2],env));
-            }else if(l == 3){
-                start = parseInt(compile(node.children[1],env));
-                end = parseInt(compile(node.children[2],env));
-                step = parseInt(compile(node.children[3], env))
-            }
-            if(step == 0){
-                throw new Error("repeat: step cannot be 0.")
-            } else if(start > end && step > 0){
-                throw new Error("repeat: step moves away from end.")
-            }else if(start < end && step < 0){
-                throw new Error("repeat: step moves away from end.")
-            }
-
-            //now we add an object, all it's children get added to it's context.
-            //then (OnPop callback?) it executes them x times, passing along to parent context?
-
-            //need to think this through more, how to do control flow/meta things generalized.
-
-            console.log("repeat ", start, end, step);
-            break;
+    
         default:
             //def lookup!            
             if(!tryRunDefinitionLookup(node.id,env)){
@@ -400,11 +425,11 @@ function compileTransformation(node:treeNode, env: Environment){
             context.setAttribute("r",compile(node.children[0],env))
             break;
         case "x":
-            setX(context,compile(node.children[0],env))
+            setX(context, compile(node.children[0],env))
             break;
         case "cx":
             //todo: determine if we need to update x or cx
-            setX(context,compile(node.children[0],env))
+            setX(context, compile(node.children[0],env))
             break;
         case "y":
             setY(context, compile(node.children[0],env))
@@ -435,6 +460,7 @@ function compileTransformation(node:treeNode, env: Environment){
         
             break;
         default:
+            
             if(!tryRunDefinitionLookup(node.id,env)){
                 let attr = node.id
                 let val = compile(node.children[0],env)

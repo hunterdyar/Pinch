@@ -3,13 +3,16 @@ enum NodeType {
     ObjectStatement,
     Number,
     Identifier,
+    Label,
     Push,
     Pop,
     Append,
+    Flow,
     DefineProcedureNode,
     BodyStatement,
     Transformation,
-    Procedure
+    Procedure,
+    Block
 }
 
 class treeNode {
@@ -89,6 +92,12 @@ function CreateProcedureNode(procedure: Procedure){
     r.procudureValue = procedure;
     return r;
 }
+function CreateNumberNode(number: Number){
+    var r = new RuntimeNode();
+    r.type = RuntimeType.Number;
+    r.numValue = number;
+    return r;
+}
 
 
 class Procedure{
@@ -101,4 +110,4 @@ class Procedure{
     }
 }
 
-export {NodeType, treeNode, Procedure, RuntimeNode, RuntimeType, CreateElementNode, CreateProcedureNode}
+export {NodeType, treeNode, Procedure, RuntimeNode, RuntimeType, CreateElementNode, CreateProcedureNode, CreateNumberNode}

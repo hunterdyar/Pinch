@@ -63,7 +63,7 @@ The @ symbol names a local variable within a flow operation. Repeat takes an opt
 
 \# repeat @i -20 20 10 {
     circle >
-    | |x i
+    | x i
     .
 }
 
