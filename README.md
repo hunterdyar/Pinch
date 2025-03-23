@@ -37,10 +37,29 @@ Further, my intended use cases:
 ### The Stack
 The > is the "push" operator. It put's what is on it's left on the "stack". The . (period) is the "pop" operator, it removes the topmost thing from the stack.
 
-|, + and # operator on whatever is currently on the stack. 
+### Stack Operations
+[op] [identifier] [param1] [param2] 
+
+|, + and ~ are stack operators. They do something to whatever is currently on the top of the stack. 
 
 - | (pipe) is a transformation, it changes some attribute.
 - \# (append) adds it's argument as a child of the stack, without pushing to it.
 - ~ (tilde) is a conversion. It alters (type casting/converting) the type on the stack, or otherwise significantly changes the object on the stack.
 
 If you don't include an operator, but there is an object, it will append by default. This is just syntactic sugar for less typing.
+
+### Flow Operations
+Stack operations are a symbol followed by an identifier. 
+
+Flow operators all start with their own symbol: # 
+
+{ } are code blocks, start and stop. They are exclusively used for flow operators. These are the normal code flow elements you might expect: loops and branching.
+
+The @ symbol names a local variable within a flow operation. Repeat takes an optional named variable which can then be looked up (without the @)
+
+\# repeat @i -20 20 10 {
+    circle >
+    | |x i
+    .
+}
+

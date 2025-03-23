@@ -1,10 +1,19 @@
 Lexing
 - string literals
+- @ labels
+- { code blocks}
+- # for code flow
 
 Parsing/Compiling
-- rectangle 
 - make dx and dy with functions, then let translate use them.
-- Update x or cx as appropriate to the context.
+- viewbox
+- g/group element
+
+Transforms
+- generalized way to deal with the transform="translate()" tricks.
+- translate, rotate
+- skewX, skewY
+- scaleX, scaleY, scaleY (both, [x,y])
 
 Program
-
+- 
