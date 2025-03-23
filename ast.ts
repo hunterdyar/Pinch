@@ -113,10 +113,21 @@ class Procedure{
     type: NodeType = NodeType.Procedure
     id: string
     statements: treeNode[] = []
+    internalPushCount: number = 0
+
     constructor(id: string, statements: treeNode[]){
         this.id = id
         this.statements = statements
     }
+    pushStatement(node: treeNode){
+        if(node.type == NodeType.Push){
+            this.internalPushCount++;
+        }else if(node.type == NodeType.Pop){
+            this.internalPushCount--;
+        }
+        this.statements.push(node)
+    }
+    
 }
 
 export {NodeType, treeNode, Procedure, RuntimeNode, RuntimeType, CreateElementNode, CreateProcedureNode, CreateNumberNode}

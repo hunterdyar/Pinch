@@ -167,6 +167,7 @@ function compile(node:treeNode, env: Environment){
     if(!node){
         throw new Error("Can't compile nothing!")
     }
+    let c: RuntimeNode
     switch(node.type){
         case NodeType.Number:
             return node.id
@@ -184,7 +185,7 @@ function compile(node:treeNode, env: Environment){
             //append! let empty object statements be equivalent to append.
             //todo: i want to move that logic to the lexer.
             if(env.active != null){
-                let c = env.peek();
+                c = env.peek();
                 if(c != null){
                     console.log("appending during default context")
                     c.appendChildElement(env.active)
@@ -210,10 +211,10 @@ function compile(node:treeNode, env: Environment){
             break;
         case NodeType.Append:
             //add to current object.
-            let c = env.peek();
+            c = env.peek();
             if(c != null){
                 if(c.type == RuntimeType.Procedure){
-                    c.procudureValue?.statements.push(node);
+                    c.procudureValue?.pushStatement(node);
                 }else if (c.type == RuntimeType.Element){
                     compile(node.children[0],env);
                     c.appendChildElement(env.active);
@@ -223,10 +224,32 @@ function compile(node:treeNode, env: Environment){
             }
             break;
         case NodeType.Push:
+            c = env.peek();
+            if(c != null){
+                if(c.type == RuntimeType.Procedure){
+                    c.procudureValue?.pushStatement(node);
+                    return;
+                }
+            }
+            //else
             compile(node.children[0], env)
             env.push(env.active); 
+
             break;
         case NodeType.Pop:
+            c = env.peek();
+            if(c != null){
+                if(c.type == RuntimeType.Procedure){
+                    //count the number of pushes in procedure! 
+                    if(c.procudureValue){
+                        if(c.procudureValue.internalPushCount > 0){
+                            c.procudureValue?.pushStatement(node);
+                            return;
+                        }
+                    }
+                }
+            }
+            //else
             env.pop();
             break;
         case NodeType.DefineProcedureNode:            
