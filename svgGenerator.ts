@@ -170,6 +170,8 @@ function compile(node:treeNode, env: Environment){
     switch(node.type){
         case NodeType.Number:
             return node.id
+        case NodeType.String:
+            return node.id
         case NodeType.Identifier:
             let local = env.getLocalOrNull(node.id);
             if(local){

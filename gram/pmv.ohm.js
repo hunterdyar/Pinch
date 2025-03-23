@@ -1,4 +1,4 @@
-const pnvGrammar = `
+const pnvGrammar = String.raw`
 PNV {
     
    Program = 
@@ -15,13 +15,13 @@ PNV {
              | unicodeSpaceSeparator
              
   spacesNoNL = 
-  ~"\\n" (whitespace | singleLineComment )*
+  ~"\n" (whitespace | singleLineComment )*
 
-bodyDelim = ("\\n" | ";")
+bodyDelim = ("\n" | ";")
 
-  lineTerminator = "\\n" | "\\r" | "\\u2028" | "\\u2029"
-  lineTerminatorSequence = "\\n" | "\\r" ~"\\n" | "\\u2028" | "\\u2029" | "\\r\\n"
-    unicodeSpaceSeparator = "\\u2000".."\\u200B" | "\\u3000"
+  lineTerminator = "\n" | "\r" | "\u2028" | "\u2029"
+  lineTerminatorSequence = "\n" | "\r" ~"\n" | "\u2028" | "\u2029" | "\r\n"
+    unicodeSpaceSeparator = "\u2000".."\u200B" | "\u3000"
 
   comment = multiLineComment | singleLineComment
   multiLineComment = "/*" (~"*/" sourceCharacter)* "*/"
@@ -35,8 +35,24 @@ bodyDelim = ("\\n" | ";")
   				//| unicodeCombiningMark
                  //| unicodeDigit | unicodeConnectorPunctuation
                  | "\u200C" | "\u200D"
-	
-
+              
+	 // String things taken from JS examples but no raw unicode or unicode escape sequence.
+     //for now, just keeping it simple while i can.
+  stringLiteral = "\"" doubleStringCharacter* "\""
+                | "'" singleStringCharacter* "'"
+  doubleStringCharacter = ~("\"" | "\\" | lineTerminator) sourceCharacter -- nonEscaped
+                        | "\\" characterEscapeSequence                             -- escaped
+                        | lineContinuation                                -- lineContinuation
+  singleStringCharacter = ~("'" | "\\" | lineTerminator) sourceCharacter -- nonEscaped
+                        | "\\" characterEscapeSequence                            -- escaped
+                        | lineContinuation                               -- lineContinuation
+  lineContinuation = "\\" lineTerminatorSequence
+  characterEscapeSequence = singleEscapeCharacter
+                          | nonEscapeCharacter
+  singleEscapeCharacter = "'" | "\"" | "\\" | "b" | "f" | "n" | "r" | "t" | "v"
+  nonEscapeCharacter = ~(characterEscapeSequence | lineTerminator) sourceCharacter
+    
+    
 	
 sc = space* (";" | end)
      | spacesNoNL (lineTerminator | &".")
@@ -61,7 +77,8 @@ sc = space* (";" | end)
 	literal = 
     ~operator ident
     | ~operator number
-    
+    | ~operator stringLiteral
+
     Statement = 
     MetaStatement
 |   ObjectStatement

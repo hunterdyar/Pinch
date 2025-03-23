@@ -36,7 +36,11 @@ s.addOperation("toTree",{
     },
     //@ts-ignore
     PushOperation(a,b){
-        return new treeNode(NodeType.Push,a.sourceString, [a.toTree()])
+        return new treeNode(NodeType.Push,b.sourceString, [a.toTree()])
+    },
+    //@ts-ignore
+    stringLiteral(a,b,c){
+        return new treeNode(NodeType.String, b.sourceString,[])
     },
     //@ts-ignore
     FlowOperation(a,b,c){

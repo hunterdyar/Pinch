@@ -2,6 +2,7 @@ enum NodeType {
     Program,
     ObjectStatement,
     Number,
+    String,
     Identifier,
     Label,
     Push,
