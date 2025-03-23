@@ -1,8 +1,7 @@
 Lexing
 - string literals
 - @ labels
-- { code blocks}
-- # for code flow
+- change # flow to { and parse object lists to have negativbe lookahead for operators. (remove @ from ops list)
 
 Parsing/Compiling
 - make dx and dy with functions, then let translate use them.

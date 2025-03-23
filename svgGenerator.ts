@@ -8,6 +8,7 @@ class Environment  {
     active: RuntimeNode | null = null
     stack: RuntimeNode[] = []
     frames: Dict<RuntimeNode>[] = [] 
+    maxFrameCount = 2048
     baseSVG: SVGElement
     defaults: Dict<string> = {
         "stroke": "black",
@@ -83,8 +84,13 @@ class Environment  {
         throw new Error("Unknown default key "+key);
     }
     pushFrame(){
+        //todo: picked this arbitrarily. i don't know what a good max is.
+        if(this.frames.length >= this.maxFrameCount){
+            throw new Error("Stack Overflow Error")
+        }
         let f = {}
         this.frames.push(f)
+        
     }
     popFrame()
     {
@@ -107,10 +113,13 @@ class Environment  {
     getLocal(id: string): RuntimeNode
     {
         if(this.frames.length >= 1){
-            let frame = this.frames[this.frames.length-1];
-            if(frame != undefined && frame[id]){
-                return frame[id]
+            for(let f = this.frames.length-1;f>=0;f--){
+                let frame = this.frames[f];
+                if(frame != undefined && frame[id]){
+                    return frame[id]
+                }
             }
+            
         }else{
             throw new Error("Can't Get Local, there is no local frame")
         }
@@ -118,9 +127,11 @@ class Environment  {
     }
     getLocalOrNull(id: string): RuntimeNode | null{
         if(this.frames.length >= 1){
-            let frame = this.frames[this.frames.length-1];
-            if(frame != undefined && frame[id]){
-                return frame[id]
+            for(let f = this.frames.length-1;f>=0;f--){
+                let frame = this.frames[f];
+                if(frame != undefined && frame[id]){
+                    return frame[id]
+                }
             }
         }
         return null;
