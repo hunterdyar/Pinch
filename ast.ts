@@ -54,6 +54,14 @@ class RuntimeNode {
             case RuntimeType.Number: return this.numValue;
         }
     }
+    getStringValue(): string {
+        switch(this.type){
+            case RuntimeType.String: return this.stringValue;
+            case RuntimeType.Number: return this.numValue.toString();
+            default:
+                throw new Error("Can't get string value for runtime node of type "+this.type)
+        }
+    }
     appendChildElement(element: RuntimeNode | null){
         if(element == null){
             throw new Error("can't appent child element that is null!")

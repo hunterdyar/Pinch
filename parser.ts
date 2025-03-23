@@ -42,7 +42,7 @@ s.addOperation("toTree",{
     FlowOperation(a,b,c){
         let op = b.toTree()
         let block = []
-        if(c.children){
+        if(c.children[0]){
             block = c.children[0].toTree()
         }
         return new treeNode(NodeType.Flow,op.id,[op,block]);

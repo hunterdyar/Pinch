@@ -15,22 +15,19 @@ class Environment  {
         "stroke-width": "5",
     }
     definitions: Dict<Procedure> = {} 
-    debug: string[] = []
 
     constructor(root: SVGSVGElement){
         this.baseSVG = root;
      }
     push(i:RuntimeNode | null){
         if(i != null){
-            this.debug.push("push")
             let b4 = this.stack.length
             this.stack.push(i)
         }else{
-            this.debug.push("[x pushed null]")
+            console.warn("[x pushed null]")
         }
     }
     pop():RuntimeNode{
-        this.debug.push("pop")
         let x= this.stack.pop();
         if(x){
             return x
@@ -54,7 +51,6 @@ class Environment  {
         }
     }
     addAndPushDefinition(identifier: string, body: treeNode[]){
-        this.debug.push("def "+identifier)
         if(identifier in this.definitions){
             throw new Error("Can't define "+identifier+" . It is already defined.");
         }
@@ -68,7 +64,6 @@ class Environment  {
     }
     getDefinition(identifier: string):treeNode[]
     {
-        this.debug.push("get def "+identifier)
         let x = this.definitions[identifier]
         if(x != undefined){
             return x.statements;
@@ -86,10 +81,6 @@ class Environment  {
          }
         }
         throw new Error("Unknown default key "+key);
-    }
-    printdebug(){
-        let s = this.debug.reduce((s,x)=>s+x+", ")
-        console.log(s);
     }
     pushFrame(){
         let f = {}
@@ -148,7 +139,6 @@ function compileAndRun(root: treeNode): SVGElement{
         //@ts-ignore
         compile(child, environment);
     });
-    environment.printdebug()
 
     if(environment.stack.length != 1){
         throw new Error("The stack is "+environment.stack.length+". It should end at 1 (root svg)");
@@ -172,7 +162,7 @@ function compile(node:treeNode, env: Environment){
         case NodeType.Identifier:
             let local = env.getLocalOrNull(node.id);
             if(local){
-                return local.getValue()
+                return local.getStringValue()
             }
             return node.id
         case NodeType.ObjectStatement:
@@ -329,7 +319,6 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
             d.setAttribute("fill",env.getDefault("fill"))
             d.setAttribute("stroke-width", env.getDefault("stroke-width"))
 
-            env.debug.push("circle")
             env.active = CreateElementNode(d)
             
             break;
@@ -359,7 +348,6 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
             d.setAttribute("fill",env.getDefault("fill"))
             d.setAttribute("stroke-width", env.getDefault("stroke-width"))
         
-            env.debug.push("rect")
             env.active = CreateElementNode(d)
             break;
         //Static Function Calls...
