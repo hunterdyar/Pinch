@@ -340,6 +340,11 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
     env.active = null;
     let d: SVGElement
     switch(node.id){
+        case "group":
+        case "g":
+            d = document.createElementNS("http://www.w3.org/2000/svg","g") as SVGElement;
+            env.active = CreateElementNode(d)
+            break;
         case "circle":
             //todo: boilerplate out the d element code.
             d = document.createElementNS("http://www.w3.org/2000/svg",node.id) as SVGElement;
@@ -362,9 +367,9 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
 
             d.setAttribute("cx","0")
             d.setAttribute("cy","0")
-            d.setAttribute("stroke",env.getDefault("stroke"))
-            d.setAttribute("fill",env.getDefault("fill"))
-            d.setAttribute("stroke-width", env.getDefault("stroke-width"))
+            //d.setAttribute("stroke",env.getDefault("stroke"))
+            //d.setAttribute("fill",env.getDefault("fill"))
+            //d.setAttribute("stroke-width", env.getDefault("stroke-width"))
 
             env.active = CreateElementNode(d)
             
@@ -391,9 +396,9 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
             //if length is 4, set x y width height
             d.setAttribute("x","0")
             d.setAttribute("y","0")
-            d.setAttribute("stroke",env.getDefault("stroke"))
-            d.setAttribute("fill",env.getDefault("fill"))
-            d.setAttribute("stroke-width", env.getDefault("stroke-width"))
+           // d.setAttribute("stroke",env.getDefault("stroke"))
+          //  d.setAttribute("fill",env.getDefault("fill"))
+          //  d.setAttribute("stroke-width", env.getDefault("stroke-width"))
         
             env.active = CreateElementNode(d)
             break;
@@ -476,6 +481,11 @@ function compileTransformation(node:treeNode, env: Environment){
         case "stroke-width":
         case "sw":
             context.setAttribute("stroke-width",compile(node.children[0],env))
+            if(!context.hasAttribute("stroke")){
+                //todo: Not sure if we should do this, as a design question -- children having an attribute overrides groups having the attribute.
+                //Instead, we could put everything inside of a group, and use that to set defaults. Either as user convention or program feature?
+                context.setAttribute("stroke",env.getDefault("stroke"))
+            }
             break;
         case "translate":
             let x = parseFloat(compile(node.children[0],env))
