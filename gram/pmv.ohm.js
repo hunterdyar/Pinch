@@ -53,49 +53,42 @@ bodyDelim = ("\n" | ";")
   nonEscapeCharacter = ~(characterEscapeSequence | lineTerminator) sourceCharacter
     
     
-	
-sc = space* (";" | end)
+	sc = space* (";" | end)
      | spacesNoNL (lineTerminator | &".")
 
     doPush = ">"
     doPop = "." ~digit
     doAppend = "+"
     doAlter = "~" | "^"
- 	doFlow = "#"
+ 	doFlow = "{"
     pipe = "|"
     doLabel = "@"
-    startBlock = "{"
-    endBlock = "}"
+    endFlow = "}"
     
-    operator = doPush | doPop | doAlter | pipe | doAppend | doFlow | doLabel
-
-    define = "def"
-
-	DefineNamedStatement =
-    define ident doPush
-
+    operator = doPush | doPop | doAlter | pipe | doAppend | endFlow | doLabel
+    
 	literal = 
     ~operator ident
     | ~operator number
     | ~operator stringLiteral
-
+    
     Statement = 
     MetaStatement
 |   ObjectStatement
     
-    StatementBlock = 
-    startBlock Statement* endBlock
+    FlowStatement = 
+    doFlow objectStatement Statement* endFlow
     
   ObjectStatement =
-  | DefineNamedStatement
   | Transformation
   | AppendOperation
   | objectStatement
-  | FlowOperation
   
    MetaStatement =
   | PushOperation
   | PopOperation
+  | FlowOperation
+
 
 PopOperation =
 doPop
@@ -112,7 +105,7 @@ objectStatement =
     = pipe objectStatement
     
     FlowOperation =
-    doFlow objectStatement StatementBlock?
+    doFlow objectStatement Statement* endFlow
     
     label = doLabel ident
    
@@ -125,7 +118,7 @@ objectStatement =
     = ~reservedKeyword letter ("-" | "_" | alnum)* 
     
     reservedKeyword =
-    operator | define
+    operator 
 
   number  (a number)
     = "-"? digit* "." digit+  -- fract

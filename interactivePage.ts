@@ -12,10 +12,8 @@ const errorp = document.getElementById("errorArea") as HTMLParagraphElement
 
 let startingCode = "def center > \n| x 75\n| y 75\n. \n \n \n + circle 50 > \n | fill blue\n ."
 startingCode = `
-# repeat @y 20 256 50
-{
-# repeat @x 20 256 50
-{
+{ repeat @y 20 256 50
+{ repeat @x 20 256 50
   + circle 20>
   | fill red
   | x x

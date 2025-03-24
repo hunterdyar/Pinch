@@ -22,11 +22,6 @@ s.addOperation("toTree",{
         return new treeNode(NodeType.Transformation,"|",[os]);
     },
     //@ts-ignore
-    DefineNamedStatement(a,b,c) {
-        console.log("def",a,b,c)
-        return new treeNode(NodeType.DefineProcedureNode,b.sourceString, []);
-    },
-    //@ts-ignore
     Transformation(a,b){
         return new treeNode(NodeType.Transformation, b.sourceString, [b.toTree()]);
     },
@@ -43,12 +38,10 @@ s.addOperation("toTree",{
         return new treeNode(NodeType.String, b.sourceString,[])
     },
     //@ts-ignore
-    FlowOperation(a,b,c){
+    FlowOperation(a,b,c,d){
         let op = b.toTree()
         let block = []
-        if(c.children[0]){
-            block = c.children[0].toTree()
-        }
+            block = c.children.map(x=>x.toTree())
         return new treeNode(NodeType.Flow,op.id,[op,block]);
     },
     //@ts-ignore
@@ -56,10 +49,10 @@ s.addOperation("toTree",{
         return new treeNode(NodeType.Pop,"pop",[]);
     },
     //@ts-ignore
-    StatementBlock(a,b,c){
-        let children = b.children.map(x=>x.toTree());
-        return new treeNode(NodeType.Block,"{}",children);
-    },
+    // StatementBlock(a,b,c){
+    //     let children = b.children.map(x=>x.toTree());
+    //     return new treeNode(NodeType.Block,"{}",children);
+    // },
     //@ts-ignore
     label(a,b){
         return new treeNode(NodeType.Label,b.sourceString,[])

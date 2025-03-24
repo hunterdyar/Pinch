@@ -9,7 +9,6 @@ enum NodeType {
     Pop,
     Append,
     Flow,
-    DefineProcedureNode,
     BodyStatement,
     Transformation,
     Procedure,

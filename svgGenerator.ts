@@ -252,11 +252,6 @@ function compile(node:treeNode, env: Environment){
             //else
             env.pop();
             break;
-        case NodeType.DefineProcedureNode:            
-            //todo: the stack needs to become our empty container for more statements.
-            let def: treeNode[] = []
-            env.addAndPushDefinition(node.id,def)
-            break;
         case NodeType.Flow:
             compileFlowStatement(node,env);
             break;
@@ -272,8 +267,8 @@ function compile(node:treeNode, env: Environment){
 }
 
 function compileFlowStatement(node: treeNode, env: Environment){
-    let call = node.children[0];
-    let body = node.children[1];
+    let call: treeNode = node.children[0];
+    let body: treeNode[] = node.children[1];
     switch(call.id){
         case "repeat":
             let l = call.children.length;
@@ -318,10 +313,25 @@ function compileFlowStatement(node: treeNode, env: Environment){
             env.pushFrame()
             for(let i = start;i<end;i+=step){
                 env.setLocal(label,CreateNumberNode(i));
-                compile(body,env)
+                body.forEach(s=>{
+                    compile(s,env)
+                })
             }
             env.popFrame();
-        break
+            break;
+        case "def":
+        case "define":
+            let def: treeNode[] = []
+            
+            //todo: we can do this with fewer lookups if we pass the procedure into compile instead of onto the stack.
+            let name = call.children[0].id
+
+            env.addAndPushDefinition(name,def)
+            body.forEach(s=>{
+                compile(s,env)
+            })
+            env.pop();
+        break;
     }
 }
 
@@ -464,7 +474,6 @@ function compileTransformation(node:treeNode, env: Environment){
             break;
         case "stroke-width":
         case "sw":
-            console.log("sw")
             context.setAttribute("stroke-width",compile(node.children[0],env))
             break;
         case "translate":
