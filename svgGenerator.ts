@@ -417,7 +417,30 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
             
             env.active = CreateElementNode(d)
             break;
-        
+        case "textin":
+                //creates a text element like text, but sets x,t,width,height to bounds of context.
+                //recompile self as text.
+                let bounds
+                if(env.peek().type == RuntimeType.Element){
+                    console.log("get bounds of ",env.peek().elementValue as SVGGraphicsElement)
+                    bounds = (env.peek().elementValue as SVGGraphicsElement).getBBox();
+                }
+                
+                if(!bounds){
+                    throw new Error("can't get bounds for textin function.")
+                }
+                node.id = "text"
+                compile(node,env);
+                if(env.active){
+                    console.log(bounds)
+                    env.active.elementValue.setAttribute("x", "50")
+                    env.active.elementValue.setAttribute("y", "50")
+                    // env.active.elementValue.setAttribute("width", bounds.width)
+                    // env.active.elementValue.setAttribute("height", bounds.height)
+                }else{
+                    throw new Error("Can't apply textin function on no text. Something broke in Text compilation.")
+                }
+            break;
         //Static Function Calls...
         case "width":
             if(node.children.length == 0)
