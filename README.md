@@ -1,13 +1,14 @@
-# Pipes 'n Vecs
+# Pinch
+This is an experimental stack-based programming language for procedurally creating vector graphics.
 
 ## About
-This is an experimental language for procedurally creating vector graphics.
-
 It transpiles code into SVG. 
 
-It's a programming language designed to feel a bit like a markup language, oriented around pipelines.
+It's a programming language designed to feel a bit like a markup language, oriented around pipelines operations and a stack.
 
 It allows you to describe how you want your SVG's to look at a more intuitive and higher level than writing XML.
+
+It's called pinch because it's small. When discussing the project with a friend, they were talking about all of the features that could be added. I held up my thumb and forefinger in a pinch gesture as I explained "No, that's great but no. Scope down!"
 
 ## Why?
 This is a design research project. My goal is not to "finish", although I am pleased with the prototype so far. There are a few questions/design spaces I hope to explore:
@@ -26,12 +27,12 @@ Further, my intended use cases:
 - I don't want to learn LaTeX?
 
 ## Related & Inspiration
-- OpenSCAD
-- Bauble
-- Penrose
-- Processing (P5, etc)
-- Shaders (Shadertoy, kodelife, shaderplace)
-- JS canvas/drawing Libraries (fabricjs, threejs, paperjs, g.js)
+- [OpenSCAD](https://openscad.org/)
+- [Bauble](https://bauble.studio/)
+- [Penrose](https://penrose.cs.cmu.edu/)
+- Creative Coding Frameworks ([Processing](https://processing.org/), [p5](https://p5js.org/), [openFrameworks](https://openframeworks.cc/), etc)
+- Shaders ([Shadertoy](https://www.shadertoy.com/), [kodelife](https://hexler.net/kodelife), [shaderplace](https://shader.place/))
+- JS canvas/drawing Libraries ([fabricjs](https://fabricjs.com/), [threejs](https://threejs.org/), [paperjs](http://paperjs.org/), [g.js](https://g.js.org/))
 
 ## Core Concepts
 ### The Stack
@@ -44,8 +45,8 @@ The 'SVG' element is the top of the stack, and many operations will equate direc
 
 |, + and ~ are stack operators. They do something to whatever is currently on the top of the stack. 
 
-- | (pipe) is a transformation, it changes some attribute of the object on the top of the stack.
-- \+ (append) adds it's argument as a child of the stack.
+- | (pipe) is a transformation, it changes some attribute of the object on the top of the stack. Usually it sets an attribute of an SVG Element.
+- \+ (append) adds it's argument as a child to the one on the stack. e.g.: ```<topofstack><append></append></topofstack>.```
 - ~ (tilde) is a conversion. It alters (type casting/converting) the type on the stack, or otherwise significantly changes the object on the stack.
 
 If you don't include an operator, but there is an object, it will append by default. But the '+' symbol is recommended anyway for clarity.
