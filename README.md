@@ -44,28 +44,32 @@ The 'SVG' element is the top of the stack, and many operations will equate direc
 
 |, + and ~ are stack operators. They do something to whatever is currently on the top of the stack. 
 
-- | (pipe) is a transformation, it changes some attribute.
-- \# (append) adds it's argument as a child of the stack, without pushing to it.
+- | (pipe) is a transformation, it changes some attribute of the object on the top of the stack.
+- \+ (append) adds it's argument as a child of the stack.
 - ~ (tilde) is a conversion. It alters (type casting/converting) the type on the stack, or otherwise significantly changes the object on the stack.
 
-If you don't include an operator, but there is an object, it will append by default. This is just syntactic sugar for less typing.
+If you don't include an operator, but there is an object, it will append by default. But the '+' symbol is recommended anyway for clarity.
 
 ### Flow Operations
-[#] [identifier] [space-seperated parameters] [{code block}]
+[{] [identifier] [space-seperated parameters] [newline] [list of statements] [}]
 
 Stack operations are a symbol followed by an identifier. 
 
-Flow operators all start with their own symbol: # 
+Flow operators all start with a { symbol, then their call on the same line. The rest of the lines are contained in a block, followed by a }.
 
-{ } are code blocks, start and stop. They are exclusively used for flow operators. These are the normal code flow elements you might expect: loops and branching.
+> The { is on the outside like with Lisp, but using curlies like C. So everyone is unhappy! (Wait, don't leave yet. It's alright. Remember, the left column of the code is a scannable set of operator symbols)
 
 The @ symbol names a local variable within a flow operation. Repeat takes an optional named variable which can then be looked up (without the @)
 
-\# repeat @i -20 20 10 {
-    circle >
+```
+{ repeat @i -20 20 10
+    + circle >
     | x i
     .
 }
 
-### Other Operations
-Define "def" is like copy/pasting it's children around. It's real useful!
+{ def itemname
++ circle 20
+}
+```
+
