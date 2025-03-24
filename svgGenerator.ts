@@ -228,7 +228,7 @@ function compile(node:treeNode, env: Environment){
             if(c != null){
                 if(c.type == RuntimeType.Procedure){
                     c.procudureValue?.pushStatement(node);
-                    return;
+                    break;
                 }
             }
             //else
@@ -244,7 +244,7 @@ function compile(node:treeNode, env: Environment){
                     if(c.procudureValue){
                         if(c.procudureValue.internalPushCount > 0){
                             c.procudureValue?.pushStatement(node);
-                            return;
+                            break;
                         }
                     }
                 }
@@ -262,8 +262,9 @@ function compile(node:treeNode, env: Environment){
             break;
         default: 
             console.log("unhandled:",node)
+            break;
     }
-    return ""
+    return node.id;
 }
 
 function compileFlowStatement(node: treeNode, env: Environment){
