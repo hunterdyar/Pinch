@@ -402,6 +402,22 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
         
             env.active = CreateElementNode(d)
             break;
+
+        case "text":
+        case "t":
+            d = document.createElementNS("http://www.w3.org/2000/svg","text") as SVGElement;
+            
+            //Text should be containers of tspan... because mixing plain with/without tspan will be a real pain,.
+            for(let i = 0;i<node.children.length;i++){
+                let attr = compile(node.children[i],env)
+                if(attr != null ){
+                        d.innerHTML += attr.toString();
+                }
+            }
+            
+            env.active = CreateElementNode(d)
+            break;
+        
         //Static Function Calls...
         case "width":
             if(node.children.length == 0)
@@ -504,7 +520,6 @@ function compileTransformation(node:treeNode, env: Environment){
         
             break;
         default:
-            
             if(!tryRunDefinitionLookup(node.id,env)){
                 let attr = node.id
                 let val = compile(node.children[0],env)

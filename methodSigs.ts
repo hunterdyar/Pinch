@@ -1,12 +1,13 @@
 const MethodSignatures:Dict<string[][]> = {
     "rect": [
         ["width", "height"],
-        ["x","y","wodth","height"],
+        ["x","y","width","height"],
+        ["x", "y", "width", "height", "rx", "ry"]
     ],
     "circle": [
         ["r"],
         ["cx","cy","r"]
-    ]
+    ],
 };
 
 function getSignature(count: Number, method: string): string[]{
