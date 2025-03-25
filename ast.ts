@@ -1,3 +1,5 @@
+import { SVGPathData } from "svg-pathdata"
+
 enum NodeType {
     Program,
     ObjectStatement,
@@ -32,7 +34,6 @@ class treeNode {
 
 enum RuntimeType{
     Element,
-    Group,
     Procedure,
     String,
     Number,
@@ -40,15 +41,14 @@ enum RuntimeType{
 class RuntimeNode {
     type: RuntimeType = RuntimeType.Element
     elementValue: SVGElement | undefined
-    groupValue :SVGElement[] | undefined //this is of runtime nodes or of elements?
     procudureValue: Procedure | undefined
     stringValue: string = ""
     numValue: Number = 0
+    pathData: SVGPathData | undefined
 
-    getValue(): SVGElement | SVGElement[] | Procedure | string | Number | undefined {
+    getValue(): SVGElement | SVGElement[] | Procedure | string | Number | SVGPathElement | undefined {
         switch (this.type){
             case RuntimeType.Element: return this.elementValue;
-            case RuntimeType.Group: return this.groupValue;
             case RuntimeType.Procedure: return this.procudureValue;
             case RuntimeType.String: return this.stringValue;
             case RuntimeType.Number: return this.numValue;
@@ -68,22 +68,14 @@ class RuntimeNode {
         }
         if(element.type != RuntimeType.Element){
             throw new Error("Can't append child element, is not element.");
-        }
-        if(this.type == RuntimeType.Element){
+        }else if(this.type == RuntimeType.Element){
             if(element.elementValue){ 
                 this.elementValue?.appendChild(element.elementValue)
             }
             return;
-        }
-        if(this.type == RuntimeType.Procedure){
+        }else if(this.type == RuntimeType.Procedure){
             throw new Error("Can't append child element to procedure. we meant to do a different thing, this is the html thing.")
             // this.procudureValue?.statements.push()
-        }
-        if(this.type == RuntimeType.Group){
-            console.log("Appending to groups... This behaviour is not yet supported.")
-            if(element.elementValue){
-                this.groupValue?.push(element.elementValue);
-            }
         }
     }
 }
@@ -106,7 +98,6 @@ function CreateNumberNode(number: Number){
     r.numValue = number;
     return r;
 }
-
 
 class Procedure{
     type: NodeType = NodeType.Procedure

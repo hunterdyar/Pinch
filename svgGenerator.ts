@@ -1,6 +1,12 @@
 import { NodeType, treeNode, Procedure, RuntimeNode, CreateElementNode, CreateProcedureNode,CreateNumberNode, RuntimeType } from "./ast";
 import { getSignature } from "./methodSigs";
-
+import {
+    SVGPathData,
+    SVGPathDataTransformer,
+    SVGPathDataParser,
+    encodeSVGPath
+  } from 'svg-pathdata';
+const pathParser = new SVGPathDataParser();
 
 class Environment  {
     width: Number = 256
@@ -201,8 +207,6 @@ function compile(node:treeNode, env: Environment){
                     node.children.forEach(x=>{
                         compileTransformation(x,env)
                     });
-                }else if(ctx.type == RuntimeType.Group){
-                    console.log("Groups not yet supported.")
                 }else{
                     throw new Error("Can't apply transformation to "+node.type.toString())
                 }
@@ -402,7 +406,6 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
         
             env.active = CreateElementNode(d)
             break;
-
         case "text":
         case "t":
             d = document.createElementNS("http://www.w3.org/2000/svg","text") as SVGElement;
@@ -417,36 +420,24 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
             
             env.active = CreateElementNode(d)
             break;
-        
-        //Static Function Calls...
-        case "width":
-            if(node.children.length == 0)
-            {
-                //variable accessor! not a thing that we have right now...
+        case "path":
+            d = document.createElementNS("http://www.w3.org/2000/svg","path") as SVGPathElement;
+            if(node.children.length == 1){
+                //We compile to SVG, so no reason not to accept he good old fashioned path commands.
+                var pathText = compile(node.children[0],env)
+                d.setAttribute("d",pathText)
             }
-            let w = compile(node.children[0],env)
-            if(w){
-                env.width = parseInt(w)
-            }else{
-                console.log("cannot parse width:",w)
+            if(node.children.length > 1){
+                throw new Error("path: Bad number of arguments.")
             }
-            return;
-        case "height":
-            let h = compile(node.children[0],env)
-            if(h){
-                env.height = parseInt(h)
-            }else{
-                console.log("cannot parse height:",h)
-            }
-            return;
-    
+            env.active = CreateElementNode(d)
+            break
         default:
             //def lookup!            
             if(!tryRunDefinitionLookup(node.id,env)){
                 console.log("Warning. Unknown standalone object statement "+node.id)
             }
         }
-        
     //
 }
 
@@ -494,6 +485,12 @@ function compileTransformation(node:treeNode, env: Environment){
             //todo: determine if we need to update y or cy. We can check if context is a circle, or if it has a cx attribute.
             setY(context, compile(node.children[0],env))
             break;
+        case "width":
+            context.setAttribute("width",compile(node.children[0],env))
+            break
+        case "height":
+            context.setAttribute("height",compile(node.children[0],env))
+            break
         case "stroke-width":
         case "sw":
             context.setAttribute("stroke-width",compile(node.children[0],env))
@@ -503,6 +500,63 @@ function compileTransformation(node:treeNode, env: Environment){
                 context.setAttribute("stroke",env.getDefault("stroke"))
             }
             break;
+        //MoveTo path Commands
+        case "M":
+        case "m":
+        //LineTo path Commands
+        case "L":
+        case "l":
+        case "v":
+        case "V":
+        case "H":
+        case "h":
+        //cubic bezier
+        case "C":
+        case "c":
+        case "S":
+        case "s":
+        //quadratic bezier
+        case "Q":
+        case "q":
+        case "T":
+        case "t":
+        //elliptical arc curve
+        case "A":
+        case "a":
+        //close path
+        case "Z":
+        case "z":
+            console.log("path",node)
+            let pathCommand = node.id+ " "
+            node.children.forEach(c=>{
+                //@ts-ignore
+                pathCommand 
+                pathCommand += " " +compile(c,env)+" "
+            });
+            let c = env.peek();
+            let p = c.pathData
+            if(p){
+                //all hacky and temp. We are going to keep a path element as runtime metadata using SVGPathData from the svg-pathdata package. It can be in any node.
+                let newCommand = new SVGPathData(pathCommand);
+                newCommand.commands.forEach(command =>{
+                    p.commands.push(command)
+
+                })
+                //todo: figure out when to do this.
+               
+            }else{
+                c.pathData = new SVGPathData(pathCommand);
+            }
+
+            if(c.elementValue){
+                //todo: as-is, we are calling encode far more often then needed. But ... hey. We don't actually have a late render() call, since the compiler operates directly on the DOM. but we could?
+                c.elementValue.setAttribute("d",c.pathData!.encode())
+            }else{
+                throw new Error("Trying to adjust or set path data for non-element. can't do that!")
+            }
+            //todo: wait, we need some polyfill 
+            break;
+        
         case "translate":
             let x = parseFloat(compile(node.children[0],env))
             let y = parseFloat(compile(node.children[1],env))
