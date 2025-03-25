@@ -115,7 +115,7 @@ objectStatement =
     | label
 
   ident  (an identifier)
-    = ~reservedKeyword letter ("-" | "_" | alnum)* 
+    = ~reservedKeyword (letter | "#") ( "-" | "_" | "#" | alnum)* 
     
     reservedKeyword =
     operator 
