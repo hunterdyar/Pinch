@@ -1,3 +1,5 @@
+import { SVGPathData } from "svg-pathdata"
+
 enum NodeType {
     Program,
     ObjectStatement,
@@ -42,6 +44,7 @@ class RuntimeNode {
     procudureValue: Procedure | undefined
     stringValue: string = ""
     numValue: Number = 0
+    pathData: SVGPathData | undefined
 
     getValue(): SVGElement | SVGElement[] | Procedure | string | Number | SVGPathElement | undefined {
         switch (this.type){

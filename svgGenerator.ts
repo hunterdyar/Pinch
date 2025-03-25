@@ -1,6 +1,12 @@
 import { NodeType, treeNode, Procedure, RuntimeNode, CreateElementNode, CreateProcedureNode,CreateNumberNode, RuntimeType } from "./ast";
 import { getSignature } from "./methodSigs";
-
+import {
+    SVGPathData,
+    SVGPathDataTransformer,
+    SVGPathDataParser,
+    encodeSVGPath
+  } from 'svg-pathdata';
+const pathParser = new SVGPathDataParser();
 
 class Environment  {
     width: Number = 256
@@ -494,6 +500,50 @@ function compileTransformation(node:treeNode, env: Environment){
                 context.setAttribute("stroke",env.getDefault("stroke"))
             }
             break;
+        //MoveTo Path Commands
+        case "M":
+        case "m":
+        //LineTo Path Commands
+        case "L":
+        case "l":
+        case "v":
+        case "V":
+        case "H":
+        case "h":
+        //todo: bezier (CcSs), quadratic (QqTt), elliptical (Aa)
+        case "Z":
+        case "z":
+            console.log("path",node)
+            let pathCommand = node.id+ " "
+            node.children.forEach(c=>{
+                //@ts-ignore
+                pathCommand 
+                pathCommand += " " +compile(c,env)+" "
+            });
+            let c = env.peek();
+            let p = c.pathData
+            if(p){
+                //all hacky and temp. We are going to keep a path element as runtime metadata using SVGPathData from the svg-pathdata package. It can be in any node.
+                let newCommand = new SVGPathData(pathCommand);
+                newCommand.commands.forEach(command =>{
+                    p.commands.push(command)
+
+                })
+                //todo: figure out when to do this.
+               
+            }else{
+                c.pathData = new SVGPathData(pathCommand);
+            }
+
+            if(c.elementValue){
+                //todo: as-is, we are calling encode far more often then needed. But ... hey. We don't actually have a late render() call, since the compiler operates directly on the DOM. but we could?
+                c.elementValue.setAttribute("d",c.pathData!.encode())
+            }else{
+                throw new Error("Trying to adjust or set path data for non-element. can't do that!")
+            }
+            //todo: wait, we need some polyfill 
+            break;
+        
         case "translate":
             let x = parseFloat(compile(node.children[0],env))
             let y = parseFloat(compile(node.children[1],env))
