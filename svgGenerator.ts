@@ -500,17 +500,30 @@ function compileTransformation(node:treeNode, env: Environment){
                 context.setAttribute("stroke",env.getDefault("stroke"))
             }
             break;
-        //MoveTo Path Commands
+        //MoveTo path Commands
         case "M":
         case "m":
-        //LineTo Path Commands
+        //LineTo path Commands
         case "L":
         case "l":
         case "v":
         case "V":
         case "H":
         case "h":
-        //todo: bezier (CcSs), quadratic (QqTt), elliptical (Aa)
+        //cubic bezier
+        case "C":
+        case "c":
+        case "S":
+        case "s":
+        //quadratic bezier
+        case "Q":
+        case "q":
+        case "T":
+        case "t":
+        //elliptical arc curve
+        case "A":
+        case "a":
+        //close path
         case "Z":
         case "z":
             console.log("path",node)
