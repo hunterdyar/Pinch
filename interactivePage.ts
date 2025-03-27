@@ -9,9 +9,12 @@ const inputContainer = document.getElementById("inputContainer") as HTMLDivEleme
 const output = document.getElementById("outputContainer") as HTMLDivElement
 const rawoutput = document.getElementById("rawContainer") as HTMLTextAreaElement
 const errorp = document.getElementById("errorArea") as HTMLParagraphElement
+const localStorageKey = "pinchEditorValue"
+let starting = localStorage.getItem(localStorageKey);
 
-let startingCode = "def center > \n| x 75\n| y 75\n. \n \n \n + circle 50 > \n | fill blue\n ."
-startingCode = `
+if(!starting){
+starting = "def center > \n| x 75\n| y 75\n. \n \n \n + circle 50 > \n | fill blue\n ."
+starting = `
 { def dot
 + circle 20 >
 | fill lightblue
@@ -29,10 +32,8 @@ startingCode = `
 .
 }
 }
-
-
-
 `
+}
 
 const drawSVGOnChangePlugin = ViewPlugin.fromClass(class {
     constructor(view) {
@@ -41,13 +42,14 @@ const drawSVGOnChangePlugin = ViewPlugin.fromClass(class {
     update(update) {
       if (update.docChanged){
         draw(update.state.doc)
+        localStorage.setItem(localStorageKey,update.state.doc)
       }
     }
     destroy() { this.dom.remove() }
   })
 
 let startState = EditorState.create({
-    doc: startingCode,
+    doc: starting,
     extensions: [drawSVGOnChangePlugin,basicSetup,keymap.of(defaultKeymap)]
 })
 
