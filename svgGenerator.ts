@@ -466,10 +466,11 @@ function compileTransformation(node:treeNode, env: Environment){
     }
     switch(node.id){
         case "fill":
-            context.setAttribute("fill",compile(node.children[0],env))
+            setSingleAttributeTransformer("fill",context,node,env)
             break
         case "radius":
-            context.setAttribute("r",compile(node.children[0],env))
+        case "r":
+            setSingleAttributeTransformer("r",context,node,env)
             break;
         case "x":
             setX(context, compile(node.children[0],env))
@@ -486,14 +487,22 @@ function compileTransformation(node:treeNode, env: Environment){
             setY(context, compile(node.children[0],env))
             break;
         case "width":
-            context.setAttribute("width",compile(node.children[0],env))
+            setSingleAttributeTransformer("width",context,node,env)
+
             break
         case "height":
-            context.setAttribute("height",compile(node.children[0],env))
+            setSingleAttributeTransformer("height",context,node,env)
+
             break
+        case "class":
+            setSingleAttributeTransformer("class",context,node,env)
+            break;
+        case "id":
+            setSingleAttributeTransformer("id",context,node,env)
+            break;
         case "stroke-width":
         case "sw":
-            context.setAttribute("stroke-width",compile(node.children[0],env))
+            setSingleAttributeTransformer("stroke-width",context,node,env)
             if(!context.hasAttribute("stroke")){
                 //todo: Not sure if we should do this, as a design question -- children having an attribute overrides groups having the attribute.
                 //Instead, we could put everything inside of a group, and use that to set defaults. Either as user convention or program feature?
@@ -534,7 +543,7 @@ function compileTransformation(node:treeNode, env: Environment){
                 pathCommand += " " +compile(c,env)+" "
             });
             let c = env.peek();
-            let p = c.pathData
+            let p = c.pathDatat
             if(p){
                 //all hacky and temp. We are going to keep a path element as runtime metadata using SVGPathData from the svg-pathdata package. It can be in any node.
                 let newCommand = new SVGPathData(pathCommand);
@@ -625,5 +634,11 @@ function setY(element: SVGElement, value: Number | string){
     }
 }
 
+function setSingleAttributeTransformer(attribute: string, context: SVGElement, node: treeNode, env: Environment){
+    if(node.children.length != 1){
+        throw new Error("bad number of arguments for "+attribute)
+    }
+    context.setAttribute(attribute,compile(node.children[0],env))
+}
 
 export{ compileAndRun}
