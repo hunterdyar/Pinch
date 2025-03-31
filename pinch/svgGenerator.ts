@@ -70,8 +70,7 @@ class Environment  {
     }
     getDefinition(identifier: string):treeNode[]
     {
-        let x = this.def
-        initions[identifier]
+        let x = this.definitions[identifier]
         if(x != undefined){
             return x.statements;
         }else{
