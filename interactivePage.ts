@@ -7,7 +7,6 @@ import { CreatePinchDrawing } from "./pinch/parser";
 console.log("Starting!");
 const inputContainer = document.getElementById("inputContainer") as HTMLDivElement
 const output = document.getElementById("outputCanvas") as HTMLCanvasElement
-const rawoutput = document.getElementById("rawContainer") as HTMLTextAreaElement
 const errorp = document.getElementById("errorArea") as HTMLParagraphElement
 const localStorageKey = "pinchEditorValue"
 let starting = localStorage.getItem(localStorageKey);
@@ -63,7 +62,6 @@ function draw(code:string){
    // let text = inputBox.value
    try {
         CreatePinchDrawing(output, code);
-        rawoutput.value = output.innerHTML
         errorp.innerText = ""
     } catch (error: any) {
         console.error(error)
