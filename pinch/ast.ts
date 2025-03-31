@@ -1,5 +1,3 @@
-import { SVGPathData } from "svg-pathdata"
-
 enum NodeType {
     Program,
     ObjectStatement,

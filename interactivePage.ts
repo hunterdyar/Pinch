@@ -3,10 +3,11 @@ import { basicSetup } from "codemirror";
 import {EditorState, StateField} from "@codemirror/state"
 import {EditorView, keymap, ViewPlugin} from "@codemirror/view"
 import {defaultKeymap} from "@codemirror/commands"
+import { CreatePinchDrawing } from "./pinch/parser";
 
 console.log("Starting!");
 const inputContainer = document.getElementById("inputContainer") as HTMLDivElement
-const output = document.getElementById("outputContainer") as HTMLDivElement
+const output = document.getElementById("outputCanvas") as HTMLCanvasElement
 const rawoutput = document.getElementById("rawContainer") as HTMLTextAreaElement
 const errorp = document.getElementById("errorArea") as HTMLParagraphElement
 const localStorageKey = "pinchEditorValue"
@@ -36,15 +37,16 @@ starting = `
 }
 
 const drawSVGOnChangePlugin = ViewPlugin.fromClass(class {
-    constructor(view) {
+    constructor(view: any) {
         draw(view.state.doc)
     }
-    update(update) {
+    update(update: any) {
       if (update.docChanged){
         draw(update.state.doc)
         localStorage.setItem(localStorageKey,update.state.doc)
       }
     }
+    //@ts-ignore
     destroy() { this.dom.remove() }
   })
 
@@ -62,12 +64,10 @@ let view = new EditorView({
 function draw(code:string){
    // let text = inputBox.value
    try {
-        let svg = CreateSVG(code);
-        output.innerText = ""
-        output.appendChild(svg);
+        CreatePinchDrawing(output, code);
         rawoutput.value = output.innerHTML
         errorp.innerText = ""
-    } catch (error) {
+    } catch (error: any) {
         console.error(error)
         errorp.innerText = error.toString()
     }

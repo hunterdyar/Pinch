@@ -1,21 +1,15 @@
 import { NodeType, treeNode, Procedure, RuntimeNode, CreateElementNode, CreateProcedureNode,CreateNumberNode, RuntimeType } from "./ast";
 import { getSignature } from "./methodSigs";
-import {
-    SVGPathData,
-    SVGPathDataTransformer,
-    SVGPathDataParser,
-    encodeSVGPath
-  } from 'svg-pathdata';
-const pathParser = new SVGPathDataParser();
+import paper from "paper";
 
 class Environment  {
     width: Number = 256
     height: Number = 256
     active: RuntimeNode | null = null
+    root: RuntimeNode
     stack: RuntimeNode[] = []
     frames: Dict<RuntimeNode>[] = [] 
     maxFrameCount = 2048
-    baseSVG: SVGElement
     defaults: Dict<string> = {
         "stroke": "black",
         "fill": "lightgrey",
@@ -23,9 +17,11 @@ class Environment  {
     }
     definitions: Dict<Procedure> = {} 
 
-    constructor(root: SVGSVGElement){
-        this.baseSVG = root;
-     }
+    constructor(){
+        //root runtime group element.
+        this.root = new RuntimeNode();
+        this.stack.push(this.root)
+    }
     push(i:RuntimeNode | null){
         if(i != null){
             let b4 = this.stack.length
@@ -40,7 +36,7 @@ class Environment  {
             return x
         }else{
             console.log("popped empty stack!",this.stack)
-            return CreateElementNode(this.baseSVG)
+            return root
         }
     }
     peek():RuntimeNode{
@@ -144,10 +140,16 @@ class Environment  {
     }
 }
 
-function compileAndRun(root: treeNode): SVGElement{
-    let svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
-    let environment = new Environment(svg)
-    environment.push(CreateElementNode(svg))
+function compileAndRun(canvas: HTMLCanvasElement, root: treeNode){
+
+    paper.setup(canvas)
+    new paper.Path.Circle({
+        center: paper.view.center,
+        radius: 50,
+        fillColor: 'blue'
+    });
+
+    let environment = new Environment()
 
     if(root.type != NodeType.Program){
         throw new Error("invalid root object. trying anyway...")
@@ -162,10 +164,9 @@ function compileAndRun(root: treeNode): SVGElement{
     }
     environment.stack.pop();
 
-    svg.setAttribute("width",environment.width.toString())
-    svg.setAttribute("height",environment.height.toString())
-    svg.setAttribute("version", "1.1")
-    return svg;
+    canvas.setAttribute("width",environment.width.toString())
+    canvas.setAttribute("height",environment.height.toString())
+    return
 }
 
 
@@ -509,63 +510,6 @@ function compileTransformation(node:treeNode, env: Environment){
                 context.setAttribute("stroke",env.getDefault("stroke"))
             }
             break;
-        //MoveTo path Commands
-        case "M":
-        case "m":
-        //LineTo path Commands
-        case "L":
-        case "l":
-        case "v":
-        case "V":
-        case "H":
-        case "h":
-        //cubic bezier
-        case "C":
-        case "c":
-        case "S":
-        case "s":
-        //quadratic bezier
-        case "Q":
-        case "q":
-        case "T":
-        case "t":
-        //elliptical arc curve
-        case "A":
-        case "a":
-        //close path
-        case "Z":
-        case "z":
-            console.log("path",node)
-            let pathCommand = node.id+ " "
-            node.children.forEach(c=>{
-                //@ts-ignore
-                pathCommand 
-                pathCommand += " " +compile(c,env)+" "
-            });
-            let c = env.peek();
-            let p = c.pathDatat
-            if(p){
-                //all hacky and temp. We are going to keep a path element as runtime metadata using SVGPathData from the svg-pathdata package. It can be in any node.
-                let newCommand = new SVGPathData(pathCommand);
-                newCommand.commands.forEach(command =>{
-                    p.commands.push(command)
-
-                })
-                //todo: figure out when to do this.
-               
-            }else{
-                c.pathData = new SVGPathData(pathCommand);
-            }
-
-            if(c.elementValue){
-                //todo: as-is, we are calling encode far more often then needed. But ... hey. We don't actually have a late render() call, since the compiler operates directly on the DOM. but we could?
-                c.elementValue.setAttribute("d",c.pathData!.encode())
-            }else{
-                throw new Error("Trying to adjust or set path data for non-element. can't do that!")
-            }
-            //todo: wait, we need some polyfill 
-            break;
-        
         case "translate":
             let x = parseFloat(compile(node.children[0],env))
             let y = parseFloat(compile(node.children[1],env))

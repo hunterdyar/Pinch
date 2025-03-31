@@ -2,7 +2,7 @@ import "ohm-js";
 import { grammar } from "ohm-js";
 import { NodeType, treeNode } from "./ast";
 import { compileAndRun } from "./svgGenerator";
-import { pnvGrammar } from "./gram/pmv.ohm";
+import { pnvGrammar } from "../gram/pmv.ohm";
 
 const g = grammar(pnvGrammar);
 
@@ -76,16 +76,16 @@ s.addOperation("toTree",{
 })
 
 
-function CreateSVG(input: string): SVGElement{
+function CreatePinchDrawing(canvas: HTMLCanvasElement, input: string){
     let lex = g.match(input);
     if(lex.succeeded())
     {
         let ast = s(lex).toTree();
-        const svg = compileAndRun(ast);
-        return svg;
+        compileAndRun(canvas, ast);
+        return;
     }else{
         throw new Error(lex.message)
     }
 }
 
-export {CreateSVG}
+export {CreatePinchDrawing}

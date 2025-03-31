@@ -32,7 +32,7 @@ Further, my intended use cases:
 - [Penrose](https://penrose.cs.cmu.edu/)
 - Creative Coding Frameworks ([Processing](https://processing.org/), [p5](https://p5js.org/), [openFrameworks](https://openframeworks.cc/), etc)
 - Shaders ([Shadertoy](https://www.shadertoy.com/), [kodelife](https://hexler.net/kodelife), [shaderplace](https://shader.place/))
-- JS canvas/drawing Libraries ([fabricjs](https://fabricjs.com/), [threejs](https://threejs.org/), [paperjs](http://paperjs.org/), [g.js](https://g.js.org/))
+- JS canvas/drawing Libraries ([fabricjs](https://fabricjs.com/), [threejs](https://threejs.org/), [paperjs](http://paperjs.org/), [g.js](https://g.js.org/), [konva](https://konvajs.org/))
 - [Shelly.dev](https://shelly.dev/)
 
 ## Core Concepts
