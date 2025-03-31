@@ -148,7 +148,7 @@ enum RuntimeElementType{
 
 abstract class RuntimeElement {
     abstract item: paper.Item
-    style: {}
+    style: Dict<any>
     type: RuntimeElementType = RuntimeElementType.Path
     isGroup = ():boolean => {return this.type == RuntimeElementType.Group} //this is "type" but we only have two types so boolean inste
 
@@ -156,7 +156,15 @@ abstract class RuntimeElement {
         this.style = {}
     }
 
+    SetStyleIfNotSet(attr: string, value: any){
+        if(!(attr in this.style)){
+            this.style[attr] = value
+        }
+    }
+
     Render(): paper.Item{
+        //todo: paperJS is applying styles in order, not by hierarchy.
+        //so style will need to be our own object, and then we check all of the current styles and do an appropriate union of them such that the more specific application takes priority.
         this.item.style = new paper.Style(this.style);
         return this.item
     }
@@ -180,6 +188,15 @@ class RuntimeGroup extends RuntimeElement {
         super()
         this.type = RuntimeElementType.Group;
         this.item = new paper.Group();
+    }
+    override Render(): paper.Item{
+        this.item.children.forEach(c=>{
+            for(let key in this.style){
+                //hmmmm we can't use item.children as the group because we lose style context, and we lose the ability to apply styles out of order on the hierarchy.
+                //todo: refactor group... uhg. I just undid that 
+            }
+        })
+        return super.Render();
     }
 }
 
