@@ -10,14 +10,17 @@ const MethodSignatures:Dict<string[][]> = {
     ],
 };
 
-function getSignature(count: Number, method: string): string[]{
+function getSignature(count: Number, method: string): object {
     let methods = MethodSignatures[method];
     if(methods){
         for (let i = 0; i <methods.length; i++) {
             const sig = methods[i];
             if(sig){
                 if(sig.length == count){
-                    return sig;
+                    let o: Dict<any> = {}
+                    sig.forEach (a=>{
+                        o[a] = 0
+                    })
                 }
             }
         }

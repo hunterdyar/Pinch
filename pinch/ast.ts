@@ -35,29 +35,25 @@ class treeNode {
 // the above is our first AST pass. The below is the "compilation" pass.
 
 enum RuntimeType{
-    Item,
-    Group,
+    Element,
     Procedure,
     String,
     Number,
 }
-type RuntimeElement = RuntimeType.Item | RuntimeType.Group
 
 class RuntimeNode {
-    type: RuntimeType = RuntimeType.Item
-    itemValue: RuntimeItem | undefined //rename to item
-    groupValue: RuntimeGroup | undefined
+    type: RuntimeType = RuntimeType.Element
+    elementValue: RuntimeElement | undefined //rename to item
     procudureValue: Procedure | undefined
     stringValue: string = ""
     numValue: Number = 0
 
     getValue(): RuntimeElement | Procedure | string | Number | RuntimeGroup | undefined {
         switch (this.type){
-            case RuntimeType.Item: return this.itemValue;
+            case RuntimeType.Element: return this.elementValue;
             case RuntimeType.Procedure: return this.procudureValue;
             case RuntimeType.String: return this.stringValue;
             case RuntimeType.Number: return this.numValue;
-            case RuntimeType.Group: return this.groupValue;
         }
     }
     getStringValue(): string {
@@ -73,18 +69,21 @@ class RuntimeNode {
         if(element == null){
             throw new Error("can't append child element that is null!")
         }
-        if(element.type != RuntimeType.Item){
+        if(element.type != RuntimeType.Element){
             throw new Error("Can't append child element, is not element.");//todo append groups into groups?
-        }else if(this.type == RuntimeType.Item){
-            if(element.itemValue){ 
-                throw new Error("Can't append a shape to a shape yet! But this will maybe be a thing with compound path?")
-            }
-            return;
-        }else if(this.type == RuntimeType.Group){
-            if(element.itemValue){
-                this.groupValue?.group.addChild(element.itemValue.path)
-            }else if(element.groupValue){
-                this.groupValue?.group.addChild(element.groupValue.group)
+        }else if(this.type == RuntimeType.Element){
+            if(this.elementValue){
+                if(element.elementValue){
+                    if(this.elementValue.isGroup()){
+                        this.elementValue.item.addChild(element.elementValue.item)
+                    }else{
+                        throw new Error("Can't, yet, append path to path. yet!")
+                    }
+                 }else{
+                    throw new Error("element value of appendee is null but element is marked as element.")
+                 }
+            }else{
+                throw new Error("element value is of this null but element is marked as element.")
             }
         }
         else if(this.type == RuntimeType.Procedure){
@@ -97,14 +96,14 @@ class RuntimeNode {
 
 function CreateElementNode(shape: paper.Path){
     var r = new RuntimeNode();
-    r.type = RuntimeType.Item;
-    r.itemValue = new RuntimeItem(shape);
+    r.type = RuntimeType.Element;
+    r.elementValue = new RuntimeItem(shape);
     return r;
 }
 function CreateGroupNode(){
     var r = new RuntimeNode();
-    r.type = RuntimeType.Group;
-    r.groupValue = new RuntimeGroup();
+    r.type = RuntimeType.Element;
+    r.elementValue = new RuntimeGroup();
     return r;
 }
 function CreateProcedureNode(procedure: Procedure){
@@ -142,41 +141,46 @@ class Procedure{
     
 }
 
-interface Renderable {
-    Render(): paper.Item;
-}
-interface Styled {
-    style: object
+enum RuntimeElementType{
+    Path,
+    Group
 }
 
-class RuntimeItem implements Renderable, Styled{
-    path: paper.Path
-    style: paper.Style
-
-    constructor(shape: paper.Path){
-        this.path = shape;
-        this.style = new paper.Style({"fillColor":"red"})
-    }
-
-    Render(): paper.Item {
-        this.path.style = this.style
-        //test
-        return this.path;
-    }
-}
-
-class RuntimeGroup implements Renderable, Styled{
-    group: paper.Group = new paper.Group();
-    style: object 
+abstract class RuntimeElement {
+    abstract item: paper.Item
+    style: {}
+    type: RuntimeElementType = RuntimeElementType.Path
+    isGroup = ():boolean => {return this.type == RuntimeElementType.Group} //this is "type" but we only have two types so boolean inste
 
     constructor(){
         this.style = {}
     }
 
     Render(): paper.Item{
-        this.group.style = new paper.Style(this.style);
-        return this.group
+        this.item.style = new paper.Style(this.style);
+        return this.item
+    }
+    
+}
+
+class RuntimeItem extends RuntimeElement{
+    item: paper.PathItem
+
+    constructor(shape: paper.Path){
+        super()
+        this.item = shape;
+        this.type = RuntimeElementType.Path
     }
 }
 
-export {NodeType, treeNode, Procedure, RuntimeNode, RuntimeType, CreateElementNode, CreateGroupNode, CreateProcedureNode, CreateNumberNode}
+class RuntimeGroup extends RuntimeElement {
+    item: paper.Group 
+    
+    constructor(){
+        super()
+        this.type = RuntimeElementType.Group;
+        this.item = new paper.Group();
+    }
+}
+
+export {NodeType, treeNode, Procedure, RuntimeNode, RuntimeType, RuntimeItem, RuntimeGroup, RuntimeElement, CreateElementNode, CreateGroupNode, CreateProcedureNode, CreateNumberNode}

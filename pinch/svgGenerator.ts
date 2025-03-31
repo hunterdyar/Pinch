@@ -1,5 +1,5 @@
 import { Point } from "paper/dist/paper-core";
-import { NodeType, treeNode, Procedure, RuntimeNode, CreateElementNode,CreateGroupNode, CreateProcedureNode,CreateNumberNode, RuntimeType } from "./ast";
+import { NodeType, treeNode, Procedure, RuntimeNode, RuntimeElement, RuntimeItem, RuntimeGroup, CreateElementNode,CreateGroupNode, CreateProcedureNode,CreateNumberNode, RuntimeType } from "./ast";
 import { getSignature } from "./methodSigs";
 import paper from "paper";
 
@@ -22,10 +22,7 @@ class Environment  {
         //root runtime group element.
         this.root = CreateGroupNode();
         //defaults
-        this.root.groupValue.style = {
-            "strokeColor": "black",
-            "fillColor": "lightgrey"
-        }
+ 
         this.stack.push(this.root)
     }
     push(i:RuntimeNode | null){
@@ -173,9 +170,8 @@ function compileAndRun(canvas: HTMLCanvasElement, root: treeNode){
         throw new Error("The stack is "+environment.stack.length+". It should end at 1 (root svg)");
     }
     environment.stack.pop();
-    environment.root.groupValue?.Render();
+    environment.root.elementValue?.Render();
 
-    paper.view.draw()
     return
 }
 
@@ -213,7 +209,7 @@ function compile(node:treeNode, env: Environment){
             if(ctx != null){
                 if(ctx.type == RuntimeType.Procedure){
                     ctx.procudureValue?.statements.push(node);
-                }else if (ctx.type == RuntimeType.Item || ctx.type == RuntimeType.Group){
+                }else if (ctx.type == RuntimeType.Element){
                     node.children.forEach(x=>{
                         compileTransformation(x,env)
                     });
@@ -229,7 +225,7 @@ function compile(node:treeNode, env: Environment){
             if(c != null){
                 if(c.type == RuntimeType.Procedure){
                     c.procudureValue?.pushStatement(node);
-                }else if (c.type == RuntimeType.Item || c.type == RuntimeType.Group){
+                }else if (c.type == RuntimeType.Element){
                     compile(node.children[0],env);
                     c.appendChildElement(env.active);
                 }
@@ -360,23 +356,22 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
         case "circle":
             //todo: boilerplate out the d element code.
             //setting radius inline is optional
-            var sig = getSignature(node.children.length,"circle");
+            //var sig = getSignature(node.children.length,"circle");
+            let sig = {}
+            let path: paper.Path
+            if(node.children.length == 1){
+                let r = parseFloat(compile(node.children[0],env))
+                path = new paper.Path.Circle(paper.view.center,r);
 
-            for(let i = 0;i<sig.length;i++){
-                let attr = compile(node.children[i],env)
-                if(attr != null ){
-                    let attrName = sig[i]
-                    if(attrName!= undefined){
-                        //d.setAttribute(attrName,attr);
-                    }else{
-                        throw new Error("bad signature check?")
-                    }
-                }else{
-                    throw new Error("bad signature?");
-                }
+            }else if(node.children.length == 3){
+                let x = parseFloat(compile(node.children[0],env))
+                let y = parseFloat(compile(node.children[1],env))
+                let r = parseFloat(compile(node.children[2],env))
+                path = new paper.Path.Circle(new paper.Point(x,y),r);
+            }else{
+                throw new Error("Circle: bad number of arguments. Want 1 (r) or 3 (x y r)")
             }
-
-            let path = new paper.Path.Circle(paper.view.center,20);
+            //todo: sig should return a properties: values object.
             //d.setAttribute("stroke",env.getDefault("stroke"))
             //d.setAttribute("fill",env.getDefault("fill"))
             //d.setAttribute("stroke-width", env.getDefault("stroke-width"))
@@ -386,20 +381,19 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
             break;
         case "rect":
 
-            var sig = getSignature(node.children.length,"rect");
-            for(let i = 0;i<sig.length;i++){
-                let attr = compile(node.children[i],env)
-                if(attr != null ){
-                    let attrName = sig[i]
-                    if(attrName!= undefined){
-                        //d.setAttribute(attrName,attr);
-                    }else{
-                        throw new Error("bad signature check?")
-                    }
-                }else{
-                    throw new Error("bad signature?");
-                }
-            }
+            // for(let i = 0;i<sig.length;i++){
+            //     let attr = compile(node.children[i],env)
+            //     if(attr != null ){
+            //         let attrName = sig[i]
+            //         if(attrName!= undefined){
+            //             //d.setAttribute(attrName,attr);
+            //         }else{
+            //             throw new Error("bad signature check?")
+            //         }
+            //     }else{
+            //         throw new Error("bad signature?");
+            //     }
+            // }
             
             let rect = new paper.Path.Rectangle(new Point(0,0),new Point(20,20))
            // d.setAttribute("x","0")
@@ -435,83 +429,56 @@ function tryRunDefinitionLookup(id: string, env:Environment):boolean{
 
 function compileTransformation(node:treeNode, env: Environment){
     let contextNode = env.peek()
-    if(contextNode.type != RuntimeType.Item){
+    if(contextNode.type != RuntimeType.Element){
         throw new Error("Can't compile context on type "+contextNode.type.toString()+". Groups not yet supported.")
     }
-    let context = contextNode.itemValue;
+    let context = contextNode.elementValue;
     if(context == null || context == undefined){
         return;
     }
     switch(node.id){
         case "fill":
-            setSingleAttributeTransformer("fill",context,node,env)
+            checkChildrenLengthForArgument(node,1)
+            context.item.style.fillColor = new paper.Color(compile(node.children[0],env))
             break
         case "radius":
         case "r":
-            setSingleAttributeTransformer("r",context,node,env)
+            checkChildrenLengthForArgument(node,1)
+            let r = parseFloat(compile(node.children[0],env))
+            if(context.type == RuntimeElementType.Path){
+                let o = (context as RuntimeItem).item
+                (context as RuntimeItem).item.path = new paper.Path.Circle({center: o.bounds.center, radius: r})
+            }
             break;
         case "x":
-            setX(context, compile(node.children[0],env))
-            break;
-        case "cx":
-            //todo: determine if we need to update x or cx
-            setX(context, compile(node.children[0],env))
+            checkChildrenLengthForArgument(node,1)
+            context.item.position.x = parseFloat(compile(node.children[0],env))
             break;
         case "y":
-            setY(context, compile(node.children[0],env))
-            break;
-        case "cy":
-            //todo: determine if we need to update y or cy. We can check if context is a circle, or if it has a cx attribute.
-            setY(context, compile(node.children[0],env))
+            checkChildrenLengthForArgument(node,1)
+            context.item.position.y = parseFloat(compile(node.children[0],env))
             break;
         case "width":
-            setSingleAttributeTransformer("width",context,node,env)
-
+            checkChildrenLengthForArgument(node,1)
+            context.item.bounds.width = parseFloat(compile(node.children[0],env))
             break
         case "height":
-            setSingleAttributeTransformer("height",context,node,env)
-
+            checkChildrenLengthForArgument(node,1)
+            context.item.bounds.height = parseFloat(compile(node.children[0],env))
             break
-        case "class":
-            setSingleAttributeTransformer("class",context,node,env)
-            break;
-        case "id":
-            setSingleAttributeTransformer("id",context,node,env)
-            break;
         case "stroke-width":
         case "sw":
-            setSingleAttributeTransformer("stroke-width",context,node,env)
-            if(!context.hasAttribute("stroke")){
-                //todo: Not sure if we should do this, as a design question -- children having an attribute overrides groups having the attribute.
-                //Instead, we could put everything inside of a group, and use that to set defaults. Either as user convention or program feature?
-                context.setAttribute("stroke",env.getDefault("stroke"))
-            }
+            checkChildrenLengthForArgument(node,1)
+            context.item.strokeWidth = parseFloat(compile(node.children[0],env))
             break;
-        case "translate":
-            let x = parseFloat(compile(node.children[0],env))
-            let y = parseFloat(compile(node.children[1],env))
-    
-            let ex = parseFloat(getAttribute(context,"x","0"))
-            let ey = parseFloat(getAttribute(context,"y","0"))
-            if(x == null || y==null)
-            {
-                console.log("translate ",x,y)
-                throw new Error("bad properties for translate");
-            }
-
-            setX(context,x+ex)
-            setY(context,y+ey)
-        
+        case "stroke":
+        case "stroke-color":
+        case "sc":
+            checkChildrenLengthForArgument(node,1)
+            context.item.strokeColor = new paper.Color(compile(node.children[0],env))
             break;
         default:
-            if(!tryRunDefinitionLookup(node.id,env)){
-                let attr = node.id
-                let val = compile(node.children[0],env)
-                console.log("unenforced attribute:",attr,val)
-                if(val){
-                    context.setAttribute(attr,val)
-                }
-            }
+            throw new Error("Unknown Transformation "+node.id);
     }
 }
 
@@ -555,11 +522,11 @@ function setY(element: SVGElement, value: Number | string){
     }
 }
 
-function setSingleAttributeTransformer(attribute: string, context: SVGElement, node: treeNode, env: Environment){
+function checkChildrenLengthForArgument(node: treeNode, length: number){
     if(node.children.length != 1){
-        throw new Error("bad number of arguments for "+attribute)
+        throw new Error("bad number of arguments for "+node.id)
     }
-    context.setAttribute(attribute,compile(node.children[0],env))
 }
+
 
 export{ compileAndRun}
