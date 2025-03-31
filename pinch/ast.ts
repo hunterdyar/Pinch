@@ -1,3 +1,7 @@
+import paper from "paper";
+
+import { collapseTextChangeRangesAcrossMultipleVersions } from "typescript"
+
 enum NodeType {
     Program,
     ObjectStatement,
@@ -31,25 +35,29 @@ class treeNode {
 // the above is our first AST pass. The below is the "compilation" pass.
 
 enum RuntimeType{
-    Element,
+    Item,
+    Group,
     Procedure,
     String,
     Number,
 }
+type RuntimeElement = RuntimeType.Item | RuntimeType.Group
+
 class RuntimeNode {
-    type: RuntimeType = RuntimeType.Element
-    elementValue: SVGElement | undefined
+    type: RuntimeType = RuntimeType.Item
+    itemValue: RuntimeItem | undefined //rename to item
+    groupValue: RuntimeGroup | undefined
     procudureValue: Procedure | undefined
     stringValue: string = ""
     numValue: Number = 0
-    pathData: SVGPathData | undefined
 
-    getValue(): SVGElement | SVGElement[] | Procedure | string | Number | SVGPathElement | undefined {
+    getValue(): RuntimeElement | Procedure | string | Number | RuntimeGroup | undefined {
         switch (this.type){
-            case RuntimeType.Element: return this.elementValue;
+            case RuntimeType.Item: return this.itemValue;
             case RuntimeType.Procedure: return this.procudureValue;
             case RuntimeType.String: return this.stringValue;
             case RuntimeType.Number: return this.numValue;
+            case RuntimeType.Group: return this.groupValue;
         }
     }
     getStringValue(): string {
@@ -60,28 +68,43 @@ class RuntimeNode {
                 throw new Error("Can't get string value for runtime node of type "+this.type)
         }
     }
+    
     appendChildElement(element: RuntimeNode | null){
         if(element == null){
-            throw new Error("can't appent child element that is null!")
+            throw new Error("can't append child element that is null!")
         }
-        if(element.type != RuntimeType.Element){
-            throw new Error("Can't append child element, is not element.");
-        }else if(this.type == RuntimeType.Element){
-            if(element.elementValue){ 
-                this.elementValue?.appendChild(element.elementValue)
+        if(element.type != RuntimeType.Item){
+            throw new Error("Can't append child element, is not element.");//todo append groups into groups?
+        }else if(this.type == RuntimeType.Item){
+            if(element.itemValue){ 
+                throw new Error("Can't append a shape to a shape yet! But this will maybe be a thing with compound path?")
             }
             return;
-        }else if(this.type == RuntimeType.Procedure){
-            throw new Error("Can't append child element to procedure. we meant to do a different thing, this is the html thing.")
-            // this.procudureValue?.statements.push()
+        }else if(this.type == RuntimeType.Group){
+            if(element.itemValue){
+                this.groupValue?.group.addChild(element.itemValue.path)
+            }else if(element.groupValue){
+                this.groupValue?.group.addChild(element.groupValue.group)
+            }
+        }
+        else if(this.type == RuntimeType.Procedure){
+            throw new Error("Can't append child element to procedure. we meant to do a different thing.")
+        }else{
+            throw new Error("call to append on invalid runtime item.")
         }
     }
 }
 
-function CreateElementNode(element: SVGElement){
+function CreateElementNode(shape: paper.Path){
     var r = new RuntimeNode();
-    r.type = RuntimeType.Element;
-    r.elementValue = element;
+    r.type = RuntimeType.Item;
+    r.itemValue = new RuntimeItem(shape);
+    return r;
+}
+function CreateGroupNode(){
+    var r = new RuntimeNode();
+    r.type = RuntimeType.Group;
+    r.groupValue = new RuntimeGroup();
     return r;
 }
 function CreateProcedureNode(procedure: Procedure){
@@ -107,6 +130,7 @@ class Procedure{
         this.id = id
         this.statements = statements
     }
+
     pushStatement(node: treeNode){
         if(node.type == NodeType.Push){
             this.internalPushCount++;
@@ -118,4 +142,41 @@ class Procedure{
     
 }
 
-export {NodeType, treeNode, Procedure, RuntimeNode, RuntimeType, CreateElementNode, CreateProcedureNode, CreateNumberNode}
+interface Renderable {
+    Render(): paper.Item;
+}
+interface Styled {
+    style: object
+}
+
+class RuntimeItem implements Renderable, Styled{
+    path: paper.Path
+    style: paper.Style
+
+    constructor(shape: paper.Path){
+        this.path = shape;
+        this.style = new paper.Style({"fillColor":"red"})
+    }
+
+    Render(): paper.Item {
+        this.path.style = this.style
+        //test
+        return this.path;
+    }
+}
+
+class RuntimeGroup implements Renderable, Styled{
+    group: paper.Group = new paper.Group();
+    style: object 
+
+    constructor(){
+        this.style = {}
+    }
+
+    Render(): paper.Item{
+        this.group.style = new paper.Style(this.style);
+        return this.group
+    }
+}
+
+export {NodeType, treeNode, Procedure, RuntimeNode, RuntimeType, CreateElementNode, CreateGroupNode, CreateProcedureNode, CreateNumberNode}

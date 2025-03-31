@@ -1,4 +1,5 @@
-import { NodeType, treeNode, Procedure, RuntimeNode, CreateElementNode, CreateProcedureNode,CreateNumberNode, RuntimeType } from "./ast";
+import { Point } from "paper/dist/paper-core";
+import { NodeType, treeNode, Procedure, RuntimeNode, CreateElementNode,CreateGroupNode, CreateProcedureNode,CreateNumberNode, RuntimeType } from "./ast";
 import { getSignature } from "./methodSigs";
 import paper from "paper";
 
@@ -19,7 +20,12 @@ class Environment  {
 
     constructor(){
         //root runtime group element.
-        this.root = new RuntimeNode();
+        this.root = CreateGroupNode();
+        //defaults
+        this.root.groupValue.style = {
+            "strokeColor": "black",
+            "fillColor": "lightgrey"
+        }
         this.stack.push(this.root)
     }
     push(i:RuntimeNode | null){
@@ -36,7 +42,7 @@ class Environment  {
             return x
         }else{
             console.log("popped empty stack!",this.stack)
-            return root
+            return this.root
         }
     }
     peek():RuntimeNode{
@@ -67,7 +73,8 @@ class Environment  {
     }
     getDefinition(identifier: string):treeNode[]
     {
-        let x = this.definitions[identifier]
+        let x = this.def
+        initions[identifier]
         if(x != undefined){
             return x.statements;
         }else{
@@ -142,13 +149,16 @@ class Environment  {
 
 function compileAndRun(canvas: HTMLCanvasElement, root: treeNode){
 
-    paper.setup(canvas)
-    new paper.Path.Circle({
-        center: paper.view.center,
-        radius: 50,
-        fillColor: 'blue'
-    });
+    //our own paper.Setup() because we want to overwrite, not append.
+    if(paper.project){
+        paper.project.clear();
+    }else{
+        paper.project = new paper.Project(canvas)
+    }
+    paper.project.addLayer(new paper.Layer())    
 
+    let c = new paper.Path.Circle(paper.view.center,30)
+    
     let environment = new Environment()
 
     if(root.type != NodeType.Program){
@@ -163,9 +173,9 @@ function compileAndRun(canvas: HTMLCanvasElement, root: treeNode){
         throw new Error("The stack is "+environment.stack.length+". It should end at 1 (root svg)");
     }
     environment.stack.pop();
+    environment.root.groupValue?.Render();
 
-    canvas.setAttribute("width",environment.width.toString())
-    canvas.setAttribute("height",environment.height.toString())
+    paper.view.draw()
     return
 }
 
@@ -188,7 +198,6 @@ function compile(node:treeNode, env: Environment){
             return node.id
         case NodeType.ObjectStatement:
             compileStandaloneObjectStatement(node,env) 
-
             //append! let empty object statements be equivalent to append.
             //todo: i want to move that logic to the lexer.
             if(env.active != null){
@@ -204,7 +213,7 @@ function compile(node:treeNode, env: Environment){
             if(ctx != null){
                 if(ctx.type == RuntimeType.Procedure){
                     ctx.procudureValue?.statements.push(node);
-                }else if (ctx.type == RuntimeType.Element){
+                }else if (ctx.type == RuntimeType.Item || ctx.type == RuntimeType.Group){
                     node.children.forEach(x=>{
                         compileTransformation(x,env)
                     });
@@ -220,7 +229,7 @@ function compile(node:treeNode, env: Environment){
             if(c != null){
                 if(c.type == RuntimeType.Procedure){
                     c.procudureValue?.pushStatement(node);
-                }else if (c.type == RuntimeType.Element){
+                }else if (c.type == RuntimeType.Item || c.type == RuntimeType.Group){
                     compile(node.children[0],env);
                     c.appendChildElement(env.active);
                 }
@@ -343,16 +352,13 @@ function compileFlowStatement(node: treeNode, env: Environment){
 
 function compileStandaloneObjectStatement(node:treeNode, env: Environment){
     env.active = null;
-    let d: SVGElement
     switch(node.id){
         case "group":
         case "g":
-            d = document.createElementNS("http://www.w3.org/2000/svg","g") as SVGElement;
-            env.active = CreateElementNode(d)
+            env.active = CreateGroupNode()
             break;
         case "circle":
             //todo: boilerplate out the d element code.
-            d = document.createElementNS("http://www.w3.org/2000/svg",node.id) as SVGElement;
             //setting radius inline is optional
             var sig = getSignature(node.children.length,"circle");
 
@@ -361,7 +367,7 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
                 if(attr != null ){
                     let attrName = sig[i]
                     if(attrName!= undefined){
-                        d.setAttribute(attrName,attr);
+                        //d.setAttribute(attrName,attr);
                     }else{
                         throw new Error("bad signature check?")
                     }
@@ -370,17 +376,15 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
                 }
             }
 
-            d.setAttribute("cx","0")
-            d.setAttribute("cy","0")
+            let path = new paper.Path.Circle(paper.view.center,20);
             //d.setAttribute("stroke",env.getDefault("stroke"))
             //d.setAttribute("fill",env.getDefault("fill"))
             //d.setAttribute("stroke-width", env.getDefault("stroke-width"))
 
-            env.active = CreateElementNode(d)
+            env.active = CreateElementNode(path)
             
             break;
         case "rect":
-            d = document.createElementNS("http://www.w3.org/2000/svg",node.id) as SVGElement;
 
             var sig = getSignature(node.children.length,"rect");
             for(let i = 0;i<sig.length;i++){
@@ -388,7 +392,7 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
                 if(attr != null ){
                     let attrName = sig[i]
                     if(attrName!= undefined){
-                        d.setAttribute(attrName,attr);
+                        //d.setAttribute(attrName,attr);
                     }else{
                         throw new Error("bad signature check?")
                     }
@@ -397,42 +401,15 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
                 }
             }
             
-        
-            //if length is 4, set x y width height
-            d.setAttribute("x","0")
-            d.setAttribute("y","0")
+            let rect = new paper.Path.Rectangle(new Point(0,0),new Point(20,20))
+           // d.setAttribute("x","0")
+           // d.setAttribute("y","0")
            // d.setAttribute("stroke",env.getDefault("stroke"))
           //  d.setAttribute("fill",env.getDefault("fill"))
           //  d.setAttribute("stroke-width", env.getDefault("stroke-width"))
         
-            env.active = CreateElementNode(d)
+            env.active = CreateElementNode(rect)
             break;
-        case "text":
-        case "t":
-            d = document.createElementNS("http://www.w3.org/2000/svg","text") as SVGElement;
-            
-            //Text should be containers of tspan... because mixing plain with/without tspan will be a real pain,.
-            for(let i = 0;i<node.children.length;i++){
-                let attr = compile(node.children[i],env)
-                if(attr != null ){
-                        d.innerHTML += attr.toString();
-                }
-            }
-            
-            env.active = CreateElementNode(d)
-            break;
-        case "path":
-            d = document.createElementNS("http://www.w3.org/2000/svg","path") as SVGPathElement;
-            if(node.children.length == 1){
-                //We compile to SVG, so no reason not to accept he good old fashioned path commands.
-                var pathText = compile(node.children[0],env)
-                d.setAttribute("d",pathText)
-            }
-            if(node.children.length > 1){
-                throw new Error("path: Bad number of arguments.")
-            }
-            env.active = CreateElementNode(d)
-            break
         default:
             //def lookup!            
             if(!tryRunDefinitionLookup(node.id,env)){
@@ -458,10 +435,10 @@ function tryRunDefinitionLookup(id: string, env:Environment):boolean{
 
 function compileTransformation(node:treeNode, env: Environment){
     let contextNode = env.peek()
-    if(contextNode.type != RuntimeType.Element){
+    if(contextNode.type != RuntimeType.Item){
         throw new Error("Can't compile context on type "+contextNode.type.toString()+". Groups not yet supported.")
     }
-    let context = contextNode.elementValue;
+    let context = contextNode.itemValue;
     if(context == null || context == undefined){
         return;
     }

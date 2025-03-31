@@ -4,7 +4,6 @@ import {EditorState, StateField} from "@codemirror/state"
 import {EditorView, keymap, ViewPlugin} from "@codemirror/view"
 import {defaultKeymap} from "@codemirror/commands"
 import { CreatePinchDrawing } from "./pinch/parser";
-
 console.log("Starting!");
 const inputContainer = document.getElementById("inputContainer") as HTMLDivElement
 const output = document.getElementById("outputCanvas") as HTMLCanvasElement
@@ -59,7 +58,6 @@ let view = new EditorView({
     state: startState,
     parent: inputContainer
 })
-
 
 function draw(code:string){
    // let text = inputBox.value
