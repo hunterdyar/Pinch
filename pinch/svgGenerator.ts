@@ -331,6 +331,21 @@ function compileFlowStatement(node: treeNode, env: Environment){
             }
             env.popFrame();
             break;
+        case "ifz":
+            //if zero
+            let ifzl = call.children.length;
+            if(ifzl != 1){
+                throw new Error("ifz: wrong number arguments. need 1")
+            }
+            let test = parseInt(compile(call.children[0],env));
+            if(test == 0){
+                env.pushFrame()
+                body.forEach(s=>{
+                    compile(s,env)
+                })
+                env.popFrame();
+            }
+        break
         case "def":
         case "define":
             let def: treeNode[] = []
