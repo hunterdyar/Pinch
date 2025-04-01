@@ -74,11 +74,7 @@ class RuntimeNode {
         }else if(this.type == RuntimeType.Element){
             if(this.elementValue){
                 if(element.elementValue){
-                    if(this.elementValue.isGroup()){
-                        this.elementValue.item.addChild(element.elementValue.item)
-                    }else{
-                        throw new Error("Can't, yet, append path to path. yet!")
-                    }
+                        this.elementValue.AddChild(element.elementValue)
                  }else{
                     throw new Error("element value of appendee is null but element is marked as element.")
                  }
@@ -149,8 +145,10 @@ enum RuntimeElementType{
 abstract class RuntimeElement {
     abstract item: paper.Item
     style: Dict<any>
+    blendMode: string = ""
+    opacity: number = -1
     type: RuntimeElementType = RuntimeElementType.Path
-    isGroup = ():boolean => {return this.type == RuntimeElementType.Group} //this is "type" but we only have two types so boolean inste
+    isGroup = ():boolean => {return this.type == RuntimeElementType.Group} 
 
     constructor(){
         this.style = {}
@@ -166,7 +164,31 @@ abstract class RuntimeElement {
         //todo: paperJS is applying styles in order, not by hierarchy.
         //so style will need to be our own object, and then we check all of the current styles and do an appropriate union of them such that the more specific application takes priority.
         this.item.style = new paper.Style(this.style);
+        if(this.blendMode){
+            this.item.blendMode = this.blendMode
+        }else{
+            this.item.blendMode = "normal"
+        }
+        //using < for unset blendmodes.
+        if(this.opacity <0){
+            this.item.opacity = 1
+        }else{
+            this.item.opacity = this.opacity
+        }
         return this.item
+    }
+
+    AddChild(element: RuntimeElement){
+        throw new Error("addChild is not implemented.");
+    }
+    SetBlendMode(bm: string){
+        bm = bm.toLowerCase().trim()
+        const valid = ['normal', 'multiply', 'screen', 'overlay', 'soft-light', 'hard-light', 'color-dodge', 'color-burn', 'darken', 'lighten', 'difference', 'exclusion', 'hue', 'saturation', 'luminosity', 'color', 'add', 'subtract', 'average', 'pin-light', 'negation', 'source-over', 'source-in', 'source-out', 'source-atop', 'destination-over', 'destination-in', 'destination-out', 'destination-atop', 'lighter', 'darker', 'copy', 'xor']   
+        if(valid.includes(bm)){
+            this.blendMode = bm;
+        }else{
+            throw new Error(bm+" is not a valid blend mode.");
+        }
     }
     
 }
@@ -183,20 +205,45 @@ class RuntimeItem extends RuntimeElement{
 
 class RuntimeGroup extends RuntimeElement {
     item: paper.Group 
-    
+    children: RuntimeElement[] = []
     constructor(){
         super()
         this.type = RuntimeElementType.Group;
         this.item = new paper.Group();
     }
     override Render(): paper.Item{
-        this.item.children.forEach(c=>{
+        console.log("render group")
+        this.children.forEach(c=>{
+            //set styles if not set.
             for(let key in this.style){
-                //hmmmm we can't use item.children as the group because we lose style context, and we lose the ability to apply styles out of order on the hierarchy.
-                //todo: refactor group... uhg. I just undid that 
+                if(!(key in c.style)){
+                    c.style[key] = this.style[key]
+                }
+            }
+            //set blendmode if unset.
+            if(c.blendMode === "" && this.blendMode !== ""){
+                c.blendMode = this.blendMode;
+            }
+
+            //if they don't have opacity set but we do.
+            if(c.opacity < 0 && this.item.opacity >= 0){
+                c.item.opacity = this.item.opacity
             }
         })
-        return super.Render();
+    
+
+        //we can remove the second loop here and do them all in one loop, but im holding off until im confident this is the approach i want to use.
+        this.children.forEach(c=>{
+            let child = c.Render()
+            this.item.addChild(child)
+        })
+
+        //we don't call super because, in paperjs, the group application will override the child application. We want hierarchial (most specific set), not temporal (last set) precedence
+        return this.item;
+    }
+
+    override AddChild(element: RuntimeElement): void {
+        this.children.push(element)
     }
 }
 

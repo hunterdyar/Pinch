@@ -438,7 +438,7 @@ function compileTransformation(node:treeNode, env: Environment){
     switch(node.id){
         case "fill":
             checkChildrenLengthForArgument(node,1)
-            context.item.style.fillColor = new paper.Color(compile(node.children[0],env))
+            context.style["fillColor"] = new paper.Color(compile(node.children[0],env))
             break
         case "radius":
         case "r":
@@ -468,14 +468,33 @@ function compileTransformation(node:treeNode, env: Environment){
         case "stroke-width":
         case "sw":
             checkChildrenLengthForArgument(node,1)
-            context.item.strokeWidth = parseFloat(compile(node.children[0],env))
+            context.style["strokeWidth"] = parseFloat(compile(node.children[0],env))
             break;
         case "stroke":
         case "stroke-color":
         case "sc":
             checkChildrenLengthForArgument(node,1)
-            context.item.strokeColor = new paper.Color(compile(node.children[0],env))
+            context.style["strokeColor"] = new paper.Color(compile(node.children[0],env))
             break;
+        case "blendmode":
+        case "bm":
+            checkChildrenLengthForArgument(node,1)
+            context.SetBlendMode(compile(node.children[0],env))
+            break;
+        case "opacity":
+            checkChildrenLengthForArgument(node,1)
+            let opacity = parseFloat(compile(node.children[0],env))
+            //todo: validity check?
+            context.opacity = opacity
+            break
+        case "transparency":
+            checkChildrenLengthForArgument(node,1)
+            let transparency = parseFloat(compile(node.children[0],env))
+            //todo: validity check?
+            //clamp 01.
+            transparency = Math.max(0,Math.min(1,transparency))
+            context.opacity = 1-transparency
+            break
         default:
             throw new Error("Unknown Transformation "+node.id);
     }
