@@ -142,7 +142,9 @@ class Environment  {
         return null;
     }
 }
-
+function GetSVGFromCurrentPaperContext(){
+    return paper.project.exportSVG();
+}
 function compileAndRun(canvas: HTMLCanvasElement, root: treeNode){
 
     //our own paper.Setup() because we want to overwrite, not append.
@@ -443,15 +445,15 @@ function compileTransformation(node:treeNode, env: Environment){
             checkChildrenLengthForArgument(node,1)
             context.style["fillColor"] = new paper.Color(compile(node.children[0],env))
             break
-        case "radius":
-        case "r":
-            checkChildrenLengthForArgument(node,1)
-            let r = parseFloat(compile(node.children[0],env))
-            if(context.type == RuntimeElementType.Path){
-                let o = (context as RuntimeItem).item
-                (context as RuntimeItem).item.path = new paper.Path.Circle({center: o.bounds.center, radius: r})
-            }
-            break;
+        // case "radius":
+        // case "r":
+        //     checkChildrenLengthForArgument(node,1)
+        //     let r = parseFloat(compile(node.children[0],env))
+        //     if(context.type == RuntimeElementType.Path){
+        //         let o = (context as RuntimeItem).item
+        //         (context as RuntimeItem).item.path = new paper.Path.Circle({center: o.bounds.center, radius: r})
+        //     }
+        //     break;
         case "x":
             checkChildrenLengthForArgument(node,1)
             context.item.position.x = parseFloat(compile(node.children[0],env))
@@ -518,4 +520,4 @@ function checkChildrenLengthForArgument(node: treeNode, length: number){
 }
 
 
-export{ compileAndRun}
+export{ compileAndRun, GetSVGFromCurrentPaperContext}

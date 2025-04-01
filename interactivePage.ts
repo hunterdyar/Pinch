@@ -1,9 +1,9 @@
-import { CreateSVG } from "./parser";
 import { basicSetup } from "codemirror";
 import {EditorState, StateField} from "@codemirror/state"
 import {EditorView, keymap, ViewPlugin} from "@codemirror/view"
 import {defaultKeymap} from "@codemirror/commands"
 import { CreatePinchDrawing } from "./pinch/parser";
+import {GetSVGFromCurrentPaperContext } from "./pinch/svgGenerator"
 console.log("Starting!");
 const inputContainer = document.getElementById("inputContainer") as HTMLDivElement
 const output = document.getElementById("outputCanvas") as HTMLCanvasElement
@@ -66,6 +66,9 @@ function draw(code:string){
     } catch (error: any) {
         console.error(error)
         errorp.innerText = error.toString()
-    }
-   
+    }  
+}
+
+function getSVG(){
+  console.log("svg",GetSVGFromCurrentPaperContext())
 }

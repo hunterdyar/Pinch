@@ -2,7 +2,7 @@
 This is an experimental stack-based programming language for procedurally creating vector graphics.
 
 ## About
-It transpiles code into SVG. 
+It transpiles code into vector images. 
 
 It's a programming language designed to feel a bit like a markup language, oriented around pipelines operations and a stack.
 
