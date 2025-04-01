@@ -460,6 +460,14 @@ function compileTransformation(node:treeNode, env: Environment){
             checkChildrenLengthForArgument(node,1)
             context.item.position.y = parseFloat(compile(node.children[0],env))
             break;
+        case "dx":
+            checkChildrenLengthForArgument(node,1)
+            context.item.position.x = context.item.position.x+parseFloat(compile(node.children[0],env))
+            break;
+        case "dy":
+            checkChildrenLengthForArgument(node,1)
+            context.item.position.y = context.item.position.y+parseFloat(compile(node.children[0],env))
+            break;
         case "width":
             checkChildrenLengthForArgument(node,1)
             context.item.bounds.width = parseFloat(compile(node.children[0],env))
@@ -500,46 +508,6 @@ function compileTransformation(node:treeNode, env: Environment){
             break
         default:
             throw new Error("Unknown Transformation "+node.id);
-    }
-}
-
-function getAttribute(element: SVGElement, attr: Number | string, fallback: Number | string = "") : string{
-    //check x/cx y/cy variations.
-    if(attr == "x" || attr == "y"){
-        if(element.nodeName == "circle" || element.nodeName == "ellipse" || element.nodeName == "radialGradient"){
-            attr = "c"+attr;
-        }
-    }
-    if(element.hasAttribute(attr.toString())){
-        let a = element.getAttribute(attr.toString())
-        if(a){ return a}
-        return fallback.toString()
-    }else{
-        return fallback.toString()
-    }
-}
-
-function setX(element: SVGElement, value: Number |string){
-    switch(element.nodeName){
-        case "circle":
-        case "ellipse":
-        case "radialGradient":
-            element.setAttribute("cx",value.toString());
-        break;
-        default:
-            element.setAttribute("x",value.toString())
-    }
-}
-
-function setY(element: SVGElement, value: Number | string){
-    switch(element.nodeName){
-        case "circle":
-        case "ellipse":
-        case "radialGradient":
-            element.setAttribute("cy",value.toString());
-        break;
-        default:
-        element.setAttribute("y",value.toString())
     }
 }
 
