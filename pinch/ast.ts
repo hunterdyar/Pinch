@@ -190,7 +190,6 @@ abstract class RuntimeElement {
             throw new Error(bm+" is not a valid blend mode.");
         }
     }
-    
 }
 
 class RuntimeItem extends RuntimeElement{
@@ -231,7 +230,6 @@ class RuntimeGroup extends RuntimeElement {
             }
         })
     
-
         //we can remove the second loop here and do them all in one loop, but im holding off until im confident this is the approach i want to use.
         this.children.forEach(c=>{
             let child = c.Render()

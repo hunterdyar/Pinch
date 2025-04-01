@@ -342,6 +342,9 @@ function compileFlowStatement(node: treeNode, env: Environment){
             })
             env.pop();
         break;
+        default:
+            throw new Error("Unknown control flow statement "+node.id)
+        break;
     }
 }
 
