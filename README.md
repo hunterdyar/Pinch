@@ -6,23 +6,22 @@ It transpiles code into vector images.
 
 It's a programming language designed to feel a bit like a markup language, oriented around pipelines operations and a stack.
 
-It allows you to describe how you want your SVG's to look at a more intuitive and higher level than writing XML.
+It allows you to describe images's as a series of visualizable and investigatable steps. 
 
 It's called pinch because it's small. When discussing the project with a friend, they were talking about all of the features that could be added. I held up my thumb and forefinger in a pinch gesture as I explained "No, that's great but no. Scope down!"
 
 ## Why?
 This is a design research project. My goal is not to "finish", although I am pleased with the prototype so far. There are a few questions/design spaces I hope to explore:
 
-- [Project Goal] Are pipeline programming suitable for image creation. Does this way of problam solving adapt well to destructuring and composing graphics? 
-- [Programming Design] How can we write structures normally found in node-based environments (Blender GeoNodes, MaxMSP, vvv, ShaderGraph, etc) in plaintext programming? (I want node tools, but produce standalone plaintext that I use my keyboard to interface with)
-- [User Design] Provide intuitive way to think about graphics creation. "Take these, align them, put them over there. These boxes should be the same size". One input does one thing, and we're not fiddling with transform handles or begging the snapping to work *just right*. 
+- **[Project Goal]** Are pipeline programming suitable for image creation. Does this way of problam solving adapt well to destructuring and composing graphics? 
+- **[Programming Design]** How can we write structures normally found in node-based environments (Blender GeoNodes, MaxMSP, vvv, ShaderGraph, etc) in plaintext programming? (I want node tools, but produce standalone plaintext that I use my keyboard to interface with)
+- **[User Design]** Provide intuitive way to think about graphics creation. "Take these, align them, put them over there. These boxes should be the same size". One input does one thing, and we're not fiddling with transform handles or begging the snapping to work *just right*. 
 
     > Ian Henry describes the joy of this approach to problem solving in their blog post on [building bauble](https://ianthehenry.com/posts/bauble/building-bauble/)
 
-
 Further, my intended use cases:
 
-- I want to write presentations, slides, diagrams, etc in context-free and nondestructive ways. Write once, render in a staticly generated site, embed in powerpoint, keynote, use with obsidian, etc. SVG is widely supported.
+- I want to write presentations, slides, diagrams, etc in context-free and nondestructive ways. Write once, render in a staticly generated site, embed in powerpoint, keynote, use with obsidian, etc. Ideally in a vector format like SVG.
 - Small diagrams without real-life scale (e.g. *not* CAD)
 - I don't want to learn LaTeX?
 
@@ -36,6 +35,31 @@ Further, my intended use cases:
 - [Shelly.dev](https://shelly.dev/)
 
 ## Core Concepts
+
+### Syntax Notes
+Syntactically, every line begins with an operator. Looking down the lefthand column of the code, you will see a symbol telling you what that line is doing, and revealing a sense of the structure of the code.
+
+Most commands have two identifiers, a shorthand and longhand. (e.g. "ifz"/"if-zero", "sw"/"stroke-width") Choose what you prefer, easier to read or easier to write.
+
+#### Inline JS
+Pinch is currently missing a lot of fundamental concepts, like "adding numbers" or "booleans".
+I plan to add these features eventually, but in the meantime the single quote (') is a "raw javascript" literal, and it is useful for doing, for example, inline math.
+
+```
+{ repeat @i -20 20 10
+    + circle >
+    | x i
+
+    { ifz 'i%20'
+    | fill red
+    }
+
+    .
+}
+
+```
+
+
 ### The Stack
 The > is the "push" operator. It put's what is on it's left on the "stack". The . (period) is the "pop" operator, it removes the topmost thing from the stack.
 
@@ -46,11 +70,11 @@ The 'SVG' element is the top of the stack, and many operations will equate direc
 
 |, + and ~ are stack operators. They do something to whatever is currently on the top of the stack. 
 
-- | (pipe) is a transformation, it changes some attribute of the object on the top of the stack. Usually it sets an attribute of an SVG Element.
-- \+ (append) adds it's argument as a child to the one on the stack. e.g.: ```<topofstack><append></append></topofstack>.```
+- \+ (append) adds it's argument as a child to the one on the stack. Usually it's adding an item to a group.
+- | (pipe) is a transformation, it changes some attribute of the object on the top of the stack.
 - ~ (tilde) is a conversion. It alters (type casting/converting) the type on the stack, or otherwise significantly changes the object on the stack.
 
-If you don't include an operator, but there is an object, it will append by default. But the '+' symbol is recommended anyway for clarity.
+If you don't include an operator, but you're on the root of the stack (the base canvas) it will append for convenience. But the '+' symbol is recommended anyway for clarity.
 
 ### Flow Operations
 [{] [identifier] [space-seperated parameters] [newline] [list of statements] [}]
