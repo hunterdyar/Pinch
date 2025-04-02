@@ -4,7 +4,7 @@ This is an experimental stack-based programming language for procedurally creati
  ![A sketch of a stopsign](./documentation/stopsign.png)
 
 ## About
-It transpiles code into vector images. 
+It compiles code into vector images. 
 
 It's a programming language designed to feel a bit like a markup language, oriented around pipelines operations and a stack.
 
@@ -65,7 +65,7 @@ I plan to add these features eventually, but in the meantime the single quote ('
 ### The Stack
 The > is the "push" operator. It put's what is on it's left on the "stack". The . (period) is the "pop" operator, it removes the topmost thing from the stack.
 
-The 'SVG' element is the top of the stack, and many operations will equate directly with the hierarchiel XML/HTML structure.
+> The bottom of the stack, by default and un-poppable, is a root "group" element. Applying transformations (| fill red) to the root is the same as adding it to any other group: it will set it's children so long as they don't have the same property set. Basically, you can apply default styles by styling the root.
 
 ### Stack Operations
 [op] [identifier] [space-separated parameters]
@@ -74,9 +74,9 @@ The 'SVG' element is the top of the stack, and many operations will equate direc
 
 - \+ (append) adds it's argument as a child to the one on the stack. Usually it's adding an item to a group.
 - | (pipe) is a transformation, it changes some attribute of the object on the top of the stack.
-- ~ (tilde) is a conversion. It alters (type casting/converting) the type on the stack, or otherwise significantly changes the object on the stack.
+- ~ (tilde) is a conversion. It alters (type casting/converting) the object on the stack, or otherwise significantly changes the object on the stack. It only affects the topmost object.
 
-If you don't include an operator, but you're on the root of the stack (the base canvas) it will append for convenience. But the '+' symbol is recommended anyway for clarity.
+> If you don't include an operator, but you're on the root of the stack (the base canvas) it will append for convenience. The '+' symbol is always recommended anyway for clarity.
 
 ### Flow Operations
 [{] [identifier] [space-seperated parameters] [newline] [list of statements] [}]
