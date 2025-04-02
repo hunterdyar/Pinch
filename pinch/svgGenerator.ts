@@ -357,6 +357,7 @@ function compileFlowStatement(node: treeNode, env: Environment){
             env.popFrame();
             break;
         case "ifz":
+        case "if-zero":
             //if zero
             let ifzl = call.children.length;
             if(ifzl != 1){
@@ -364,6 +365,54 @@ function compileFlowStatement(node: treeNode, env: Environment){
             }
             let test = parseInt(compile(call.children[0],env));
             if(test == 0){
+                env.pushFrame()
+                body.forEach(s=>{
+                    compile(s,env)
+                })
+                env.popFrame();
+            }
+        break
+        case "ifnz":
+        case "if-not-zero":
+            //if zero
+            let ifnzl = call.children.length;
+            if(ifnzl != 1){
+                throw new Error("ifz: wrong number arguments. need 1")
+            }
+            let testnz = parseInt(compile(call.children[0],env));
+            if(testnz != 0){
+                env.pushFrame()
+                body.forEach(s=>{
+                    compile(s,env)
+                })
+                env.popFrame();
+            }
+        break
+        case "ifpos":
+        case "if-positive":
+            //if zero
+            let ifposl = call.children.length;
+            if(ifposl != 1){
+                throw new Error("ifz: wrong number arguments. need 1")
+            }
+            let testpos = parseInt(compile(call.children[0],env));
+            if(testpos >= 0){
+                env.pushFrame()
+                body.forEach(s=>{
+                    compile(s,env)
+                })
+                env.popFrame();
+            }
+        break
+        case "ifneg":
+        case "if-negative":
+            //if zero
+            let ifnegl = call.children.length;
+            if(ifnegl != 1){
+                throw new Error("ifz: wrong number arguments. need 1")
+            }
+            let testneg = parseInt(compile(call.children[0],env));
+            if(testneg < 0){
                 env.pushFrame()
                 body.forEach(s=>{
                     compile(s,env)
