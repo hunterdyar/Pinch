@@ -1,13 +1,12 @@
-import { CreateSVG } from "./parser";
 import { basicSetup } from "codemirror";
 import {EditorState, StateField} from "@codemirror/state"
 import {EditorView, keymap, ViewPlugin} from "@codemirror/view"
-import {defaultKeymap} from "@codemirror/commands"
-
+import {defaultKeymap, indentWithTab} from "@codemirror/commands"
+import { CreatePinchDrawing } from "./pinch/parser";
+import {GetSVGFromCurrentPaperContext } from "./pinch/svgGenerator"
 console.log("Starting!");
 const inputContainer = document.getElementById("inputContainer") as HTMLDivElement
-const output = document.getElementById("outputContainer") as HTMLDivElement
-const rawoutput = document.getElementById("rawContainer") as HTMLTextAreaElement
+const output = document.getElementById("outputCanvas") as HTMLCanvasElement
 const errorp = document.getElementById("errorArea") as HTMLParagraphElement
 const localStorageKey = "pinchEditorValue"
 let starting = localStorage.getItem(localStorageKey);
@@ -36,21 +35,22 @@ starting = `
 }
 
 const drawSVGOnChangePlugin = ViewPlugin.fromClass(class {
-    constructor(view) {
+    constructor(view: any) {
         draw(view.state.doc)
     }
-    update(update) {
+    update(update: any) {
       if (update.docChanged){
         draw(update.state.doc)
         localStorage.setItem(localStorageKey,update.state.doc)
       }
     }
+    //@ts-ignore
     destroy() { this.dom.remove() }
   })
 
 let startState = EditorState.create({
     doc: starting,
-    extensions: [drawSVGOnChangePlugin,basicSetup,keymap.of(defaultKeymap)]
+    extensions: [drawSVGOnChangePlugin,basicSetup,keymap.of(defaultKeymap), keymap.of(indentWithTab)]
 })
 
 let view = new EditorView({
@@ -58,18 +58,20 @@ let view = new EditorView({
     parent: inputContainer
 })
 
-
 function draw(code:string){
    // let text = inputBox.value
    try {
-        let svg = CreateSVG(code);
-        output.innerText = ""
-        output.appendChild(svg);
-        rawoutput.value = output.innerHTML
+        let stime = Date.now();
+        CreatePinchDrawing(output, code);
         errorp.innerText = ""
-    } catch (error) {
+        let end = Date.now();
+        console.log("done in "+(end-stime).toString()+"ms");
+    } catch (error: any) {
         console.error(error)
         errorp.innerText = error.toString()
-    }
-   
+    }  
+}
+
+function getSVG(){
+  console.log("svg",GetSVGFromCurrentPaperContext())
 }

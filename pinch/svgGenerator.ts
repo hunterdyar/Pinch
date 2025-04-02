@@ -1,31 +1,33 @@
-import { NodeType, treeNode, Procedure, RuntimeNode, CreateElementNode, CreateProcedureNode,CreateNumberNode, RuntimeType } from "./ast";
+import { Point } from "paper/dist/paper-core";
+import { NodeType, treeNode, Procedure, RuntimeNode, RuntimeElement, RuntimeItem, RuntimeGroup, CreateElementNode,CreateGroupNode, CreateProcedureNode,CreateNumberNode, RuntimeType } from "./ast";
 import { getSignature } from "./methodSigs";
-import {
-    SVGPathData,
-    SVGPathDataTransformer,
-    SVGPathDataParser,
-    encodeSVGPath
-  } from 'svg-pathdata';
-const pathParser = new SVGPathDataParser();
+import paper from "paper";
 
 class Environment  {
     width: Number = 256
     height: Number = 256
     active: RuntimeNode | null = null
+    root: RuntimeNode
     stack: RuntimeNode[] = []
     frames: Dict<RuntimeNode>[] = [] 
     maxFrameCount = 2048
-    baseSVG: SVGElement
     defaults: Dict<string> = {
         "stroke": "black",
         "fill": "lightgrey",
-        "stroke-width": "5",
     }
     definitions: Dict<Procedure> = {} 
 
-    constructor(root: SVGSVGElement){
-        this.baseSVG = root;
-     }
+    constructor(){
+        //root runtime group element.
+        this.root = CreateGroupNode();
+        //defaults
+        //@ts-ignore
+        this.root.elementValue.style["strokeColor"] = this.defaults["stroke"]
+        //@ts-ignore
+        this.root.elementValue.style["fillColor"] = this.defaults["fill"]
+ 
+        this.stack.push(this.root)
+    }
     push(i:RuntimeNode | null){
         if(i != null){
             let b4 = this.stack.length
@@ -40,7 +42,7 @@ class Environment  {
             return x
         }else{
             console.log("popped empty stack!",this.stack)
-            return CreateElementNode(this.baseSVG)
+            return this.root
         }
     }
     peek():RuntimeNode{
@@ -106,6 +108,24 @@ class Environment  {
             throw new Error("Can't Pop Frame")
         }
     }
+    printJSFrame():string {
+        var print = ""
+        for(let f = this.frames.length-1;f>=0;f--){
+            const fr = this.frames[f];
+            if(fr){
+                for(let v in fr)
+                {
+                    let val = fr[v];
+                    if(val){
+                        print += "let "+v+" = "
+                        print += val.getStringValue()
+                        print +=";\n"
+                    }
+                }
+            }
+        }
+        return print;
+    }
     setLocal(id: string, val: RuntimeNode){
         if(this.frames.length >= 1){
             let frame = this.frames[this.frames.length-1];
@@ -143,11 +163,22 @@ class Environment  {
         return null;
     }
 }
+function GetSVGFromCurrentPaperContext(){
+    return paper.project.exportSVG();
+}
+function compileAndRun(canvas: HTMLCanvasElement, root: treeNode){
 
-function compileAndRun(root: treeNode): SVGElement{
-    let svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
-    let environment = new Environment(svg)
-    environment.push(CreateElementNode(svg))
+    //our own paper.Setup() because we want to overwrite, not append.
+    if(paper.project){
+        paper.project.clear();
+    }else{
+        paper.project = new paper.Project(canvas)
+    }
+    paper.project.addLayer(new paper.Layer())    
+
+    let c = new paper.Path.Circle(paper.view.center,30)
+    
+    let environment = new Environment()
 
     if(root.type != NodeType.Program){
         throw new Error("invalid root object. trying anyway...")
@@ -161,11 +192,9 @@ function compileAndRun(root: treeNode): SVGElement{
         throw new Error("The stack is "+environment.stack.length+". It should end at 1 (root svg)");
     }
     environment.stack.pop();
+    environment.root.elementValue?.Render();
 
-    svg.setAttribute("width",environment.width.toString())
-    svg.setAttribute("height",environment.height.toString())
-    svg.setAttribute("version", "1.1")
-    return svg;
+    return
 }
 
 
@@ -187,13 +216,11 @@ function compile(node:treeNode, env: Environment){
             return node.id
         case NodeType.ObjectStatement:
             compileStandaloneObjectStatement(node,env) 
-
             //append! let empty object statements be equivalent to append.
             //todo: i want to move that logic to the lexer.
             if(env.active != null){
                 c = env.peek();
                 if(c != null){
-                    console.log("appending during default context")
                     c.appendChildElement(env.active)
                 }
             }   
@@ -264,6 +291,13 @@ function compile(node:treeNode, env: Environment){
                 compile(n,env);
             })
             break;
+        case NodeType.RawJS:
+            //todo: rawJS is a hacky workaround to do inline math expressions without having to use node transformers for math (we don't have "normal" binary operators.)
+            //eventually, i'll just write the inline math functions as shorthand for the pipeline flow. Maybe backticks for inline, or single quotes like right now.
+            //for now, | * 3 will multiply the context by three, not the left by three.... 
+            let expression = "'use strict';\n"+env.printJSFrame()+"\n"+node.id
+            return eval?.(expression) 
+            break;
         default: 
             console.log("unhandled:",node)
             break;
@@ -324,6 +358,70 @@ function compileFlowStatement(node: treeNode, env: Environment){
             }
             env.popFrame();
             break;
+        case "ifz":
+        case "if-zero":
+            //if zero
+            let ifzl = call.children.length;
+            if(ifzl != 1){
+                throw new Error("ifz: wrong number arguments. need 1")
+            }
+            let test = parseInt(compile(call.children[0],env));
+            if(test == 0){
+                env.pushFrame()
+                body.forEach(s=>{
+                    compile(s,env)
+                })
+                env.popFrame();
+            }
+        break
+        case "ifnz":
+        case "if-not-zero":
+            //if zero
+            let ifnzl = call.children.length;
+            if(ifnzl != 1){
+                throw new Error("ifz: wrong number arguments. need 1")
+            }
+            let testnz = parseInt(compile(call.children[0],env));
+            if(testnz != 0){
+                env.pushFrame()
+                body.forEach(s=>{
+                    compile(s,env)
+                })
+                env.popFrame();
+            }
+        break
+        case "ifpos":
+        case "if-positive":
+            //if zero
+            let ifposl = call.children.length;
+            if(ifposl != 1){
+                throw new Error("ifz: wrong number arguments. need 1")
+            }
+            let testpos = parseInt(compile(call.children[0],env));
+            if(testpos >= 0){
+                env.pushFrame()
+                body.forEach(s=>{
+                    compile(s,env)
+                })
+                env.popFrame();
+            }
+        break
+        case "ifneg":
+        case "if-negative":
+            //if zero
+            let ifnegl = call.children.length;
+            if(ifnegl != 1){
+                throw new Error("ifz: wrong number arguments. need 1")
+            }
+            let testneg = parseInt(compile(call.children[0],env));
+            if(testneg < 0){
+                env.pushFrame()
+                body.forEach(s=>{
+                    compile(s,env)
+                })
+                env.popFrame();
+            }
+        break
         case "def":
         case "define":
             let def: treeNode[] = []
@@ -337,101 +435,108 @@ function compileFlowStatement(node: treeNode, env: Environment){
             })
             env.pop();
         break;
+        default:
+            throw new Error("Unknown control flow statement "+node.id)
+        break;
     }
 }
 
 function compileStandaloneObjectStatement(node:treeNode, env: Environment){
     env.active = null;
-    let d: SVGElement
+    let path: paper.Path
     switch(node.id){
         case "group":
         case "g":
-            d = document.createElementNS("http://www.w3.org/2000/svg","g") as SVGElement;
-            env.active = CreateElementNode(d)
+            env.active = CreateGroupNode()
             break;
         case "circle":
             //todo: boilerplate out the d element code.
-            d = document.createElementNS("http://www.w3.org/2000/svg",node.id) as SVGElement;
             //setting radius inline is optional
-            var sig = getSignature(node.children.length,"circle");
+            //var sig = getSignature(node.children.length,"circle");
+            let sig = {}
+            if(node.children.length == 1){
+                let r = parseFloat(compile(node.children[0],env))
+                path = new paper.Path.Circle(paper.view.center,r);
 
-            for(let i = 0;i<sig.length;i++){
-                let attr = compile(node.children[i],env)
-                if(attr != null ){
-                    let attrName = sig[i]
-                    if(attrName!= undefined){
-                        d.setAttribute(attrName,attr);
-                    }else{
-                        throw new Error("bad signature check?")
-                    }
-                }else{
-                    throw new Error("bad signature?");
-                }
+            }else if(node.children.length == 3){
+                let x = parseFloat(compile(node.children[0],env))
+                let y = parseFloat(compile(node.children[1],env))
+                let r = parseFloat(compile(node.children[2],env))
+                path = new paper.Path.Circle(new paper.Point(x,y),r);
+            }else{
+                throw new Error("Circle: bad number of arguments. Want 1 (r) or 3 (x y r)")
             }
-
-            d.setAttribute("cx","0")
-            d.setAttribute("cy","0")
+            //todo: sig should return a properties: values object.
             //d.setAttribute("stroke",env.getDefault("stroke"))
             //d.setAttribute("fill",env.getDefault("fill"))
             //d.setAttribute("stroke-width", env.getDefault("stroke-width"))
 
-            env.active = CreateElementNode(d)
+            env.active = CreateElementNode(path)
             
             break;
         case "rect":
-            d = document.createElementNS("http://www.w3.org/2000/svg",node.id) as SVGElement;
 
-            var sig = getSignature(node.children.length,"rect");
-            for(let i = 0;i<sig.length;i++){
-                let attr = compile(node.children[i],env)
-                if(attr != null ){
-                    let attrName = sig[i]
-                    if(attrName!= undefined){
-                        d.setAttribute(attrName,attr);
-                    }else{
-                        throw new Error("bad signature check?")
-                    }
-                }else{
-                    throw new Error("bad signature?");
-                }
-            }
+        if(node.children.length == 1){
+            let size = parseFloat(compile(node.children[0],env))
+            let tr = new paper.Point(paper.view.center.x-size/2,paper.view.center.y+size/2)
+            let s = new paper.Size(size,size)
+            path = new paper.Path.Rectangle(tr,s);
             
-        
-            //if length is 4, set x y width height
-            d.setAttribute("x","0")
-            d.setAttribute("y","0")
-           // d.setAttribute("stroke",env.getDefault("stroke"))
-          //  d.setAttribute("fill",env.getDefault("fill"))
-          //  d.setAttribute("stroke-width", env.getDefault("stroke-width"))
-        
-            env.active = CreateElementNode(d)
+        }else if(node.children.length == 2){
+            let width = parseFloat(compile(node.children[0],env))
+            let height = parseFloat(compile(node.children[1],env))
+            let tr = new paper.Point(paper.view.center.x-width/2,paper.view.center.y+height/2)
+            let bl = new paper.Point(paper.view.center.x+width/2,paper.view.center.y-height/2)
+            path = new paper.Path.Rectangle(tr,bl);
+
+        }else if(node.children.length == 4){
+            let x = parseFloat(compile(node.children[0],env))
+            let y = parseFloat(compile(node.children[1],env))
+            let w = parseFloat(compile(node.children[2],env))
+            let h = parseFloat(compile(node.children[3],env))
+            let pos = new paper.Point(x,y)
+            let s = new paper.Size(w,h)
+            path = new paper.Path.Rectangle(pos,s);
+
+        }else{
+            throw new Error("Rect: bad number of arguments. Want 1 (square size) or 2 (width height) or 4 (x y width height)")
+        }
+            
+        env.active = CreateElementNode(path)
+
             break;
-        case "text":
-        case "t":
-            d = document.createElementNS("http://www.w3.org/2000/svg","text") as SVGElement;
-            
-            //Text should be containers of tspan... because mixing plain with/without tspan will be a real pain,.
-            for(let i = 0;i<node.children.length;i++){
-                let attr = compile(node.children[i],env)
-                if(attr != null ){
-                        d.innerHTML += attr.toString();
-                }
+        case "line":
+            if(node.children.length == 4){
+                let x1 = parseFloat(compile(node.children[0],env))
+                let y1 = parseFloat(compile(node.children[1],env))
+                let x2 = parseFloat(compile(node.children[2],env))
+                let y2 = parseFloat(compile(node.children[3],env))
+                let a = new paper.Point(x1,y1)
+                let b = new paper.Point(x2,y2)
+                path = new paper.Path.Line(a,b);
+            }else{
+                throw new Error("Line: bad number of arguments. Want 4 (x1 y1 x2 y2)")
             }
-            
-            env.active = CreateElementNode(d)
-            break;
-        case "path":
-            d = document.createElementNS("http://www.w3.org/2000/svg","path") as SVGPathElement;
-            if(node.children.length == 1){
-                //We compile to SVG, so no reason not to accept he good old fashioned path commands.
-                var pathText = compile(node.children[0],env)
-                d.setAttribute("d",pathText)
+            env.active = CreateElementNode(path);
+        break;
+        case "polygon":
+            if(node.children.length == 2){
+                let sides = parseFloat(compile(node.children[0],env))
+                let radius = parseFloat(compile(node.children[1],env))
+                path = new paper.Path.RegularPolygon(paper.view.center,sides,radius);
+            }else if(node.children.length == 4){
+                let x = parseFloat(compile(node.children[0],env))
+                let y = parseFloat(compile(node.children[1],env))
+                let sides = parseFloat(compile(node.children[2],env))
+                let radius = parseFloat(compile(node.children[3],env))
+                let a = new paper.Point(x,y)
+                path = new paper.Path.RegularPolygon(a,sides,radius);
             }
-            if(node.children.length > 1){
-                throw new Error("path: Bad number of arguments.")
+            else{
+                throw new Error("Line: bad number of arguments. Want 2 (sides radius) or 4 (x y sides radius)")
             }
-            env.active = CreateElementNode(d)
-            break
+            env.active = CreateElementNode(path);
+        break;
         default:
             //def lookup!            
             if(!tryRunDefinitionLookup(node.id,env)){
@@ -466,179 +571,82 @@ function compileTransformation(node:treeNode, env: Environment){
     }
     switch(node.id){
         case "fill":
-            setSingleAttributeTransformer("fill",context,node,env)
+            checkChildrenLengthForArgument(node,1)
+            context.style["fillColor"] = new paper.Color(compile(node.children[0],env))
             break
-        case "radius":
-        case "r":
-            setSingleAttributeTransformer("r",context,node,env)
-            break;
+        // case "radius":
+        // case "r":
+        //     checkChildrenLengthForArgument(node,1)
+        //     let r = parseFloat(compile(node.children[0],env))
+        //     if(context.type == RuntimeElementType.Path){
+        //         let o = (context as RuntimeItem).item
+        //         (context as RuntimeItem).item.path = new paper.Path.Circle({center: o.bounds.center, radius: r})
+        //     }
+        //     break;
         case "x":
-            setX(context, compile(node.children[0],env))
-            break;
-        case "cx":
-            //todo: determine if we need to update x or cx
-            setX(context, compile(node.children[0],env))
+            checkChildrenLengthForArgument(node,1)
+            context.item.position.x = parseFloat(compile(node.children[0],env))
             break;
         case "y":
-            setY(context, compile(node.children[0],env))
+            checkChildrenLengthForArgument(node,1)
+            context.item.position.y = parseFloat(compile(node.children[0],env))
             break;
-        case "cy":
-            //todo: determine if we need to update y or cy. We can check if context is a circle, or if it has a cx attribute.
-            setY(context, compile(node.children[0],env))
+        case "dx":
+            checkChildrenLengthForArgument(node,1)
+            context.item.position.x = context.item.position.x+parseFloat(compile(node.children[0],env))
+            break;
+        case "dy":
+            checkChildrenLengthForArgument(node,1)
+            context.item.position.y = context.item.position.y+parseFloat(compile(node.children[0],env))
             break;
         case "width":
-            setSingleAttributeTransformer("width",context,node,env)
-
+            checkChildrenLengthForArgument(node,1)
+            context.item.bounds.width = parseFloat(compile(node.children[0],env))
             break
         case "height":
-            setSingleAttributeTransformer("height",context,node,env)
-
+            checkChildrenLengthForArgument(node,1)
+            context.item.bounds.height = parseFloat(compile(node.children[0],env))
             break
-        case "class":
-            setSingleAttributeTransformer("class",context,node,env)
-            break;
-        case "id":
-            setSingleAttributeTransformer("id",context,node,env)
-            break;
         case "stroke-width":
         case "sw":
-            setSingleAttributeTransformer("stroke-width",context,node,env)
-            if(!context.hasAttribute("stroke")){
-                //todo: Not sure if we should do this, as a design question -- children having an attribute overrides groups having the attribute.
-                //Instead, we could put everything inside of a group, and use that to set defaults. Either as user convention or program feature?
-                context.setAttribute("stroke",env.getDefault("stroke"))
-            }
+            checkChildrenLengthForArgument(node,1)
+            context.style["strokeWidth"] = parseFloat(compile(node.children[0],env))
             break;
-        //MoveTo path Commands
-        case "M":
-        case "m":
-        //LineTo path Commands
-        case "L":
-        case "l":
-        case "v":
-        case "V":
-        case "H":
-        case "h":
-        //cubic bezier
-        case "C":
-        case "c":
-        case "S":
-        case "s":
-        //quadratic bezier
-        case "Q":
-        case "q":
-        case "T":
-        case "t":
-        //elliptical arc curve
-        case "A":
-        case "a":
-        //close path
-        case "Z":
-        case "z":
-            console.log("path",node)
-            let pathCommand = node.id+ " "
-            node.children.forEach(c=>{
-                //@ts-ignore
-                pathCommand 
-                pathCommand += " " +compile(c,env)+" "
-            });
-            let c = env.peek();
-            let p = c.pathDatat
-            if(p){
-                //all hacky and temp. We are going to keep a path element as runtime metadata using SVGPathData from the svg-pathdata package. It can be in any node.
-                let newCommand = new SVGPathData(pathCommand);
-                newCommand.commands.forEach(command =>{
-                    p.commands.push(command)
-
-                })
-                //todo: figure out when to do this.
-               
-            }else{
-                c.pathData = new SVGPathData(pathCommand);
-            }
-
-            if(c.elementValue){
-                //todo: as-is, we are calling encode far more often then needed. But ... hey. We don't actually have a late render() call, since the compiler operates directly on the DOM. but we could?
-                c.elementValue.setAttribute("d",c.pathData!.encode())
-            }else{
-                throw new Error("Trying to adjust or set path data for non-element. can't do that!")
-            }
-            //todo: wait, we need some polyfill 
+        case "stroke":
+        case "stroke-color":
+        case "sc":
+            checkChildrenLengthForArgument(node,1)
+            context.style["strokeColor"] = new paper.Color(compile(node.children[0],env))
             break;
-        
-        case "translate":
-            let x = parseFloat(compile(node.children[0],env))
-            let y = parseFloat(compile(node.children[1],env))
-    
-            let ex = parseFloat(getAttribute(context,"x","0"))
-            let ey = parseFloat(getAttribute(context,"y","0"))
-            if(x == null || y==null)
-            {
-                console.log("translate ",x,y)
-                throw new Error("bad properties for translate");
-            }
-
-            setX(context,x+ex)
-            setY(context,y+ey)
-        
+        case "blendmode":
+        case "bm":
+            checkChildrenLengthForArgument(node,1)
+            context.SetBlendMode(compile(node.children[0],env))
             break;
+        case "opacity":
+            checkChildrenLengthForArgument(node,1)
+            let opacity = parseFloat(compile(node.children[0],env))
+            //todo: validity check?
+            context.opacity = opacity
+            break
+        case "transparency":
+            checkChildrenLengthForArgument(node,1)
+            let transparency = parseFloat(compile(node.children[0],env))
+            //todo: validity check?
+            //clamp 01.
+            transparency = Math.max(0,Math.min(1,transparency))
+            context.opacity = 1-transparency
+            break
         default:
-            if(!tryRunDefinitionLookup(node.id,env)){
-                let attr = node.id
-                let val = compile(node.children[0],env)
-                console.log("unenforced attribute:",attr,val)
-                if(val){
-                    context.setAttribute(attr,val)
-                }
-            }
+            throw new Error("Unknown Transformation "+node.id);
     }
 }
 
-function getAttribute(element: SVGElement, attr: Number | string, fallback: Number | string = "") : string{
-    //check x/cx y/cy variations.
-    if(attr == "x" || attr == "y"){
-        if(element.nodeName == "circle" || element.nodeName == "ellipse" || element.nodeName == "radialGradient"){
-            attr = "c"+attr;
-        }
-    }
-    if(element.hasAttribute(attr.toString())){
-        let a = element.getAttribute(attr.toString())
-        if(a){ return a}
-        return fallback.toString()
-    }else{
-        return fallback.toString()
-    }
-}
-
-function setX(element: SVGElement, value: Number |string){
-    switch(element.nodeName){
-        case "circle":
-        case "ellipse":
-        case "radialGradient":
-            element.setAttribute("cx",value.toString());
-        break;
-        default:
-            element.setAttribute("x",value.toString())
-    }
-}
-
-function setY(element: SVGElement, value: Number | string){
-    switch(element.nodeName){
-        case "circle":
-        case "ellipse":
-        case "radialGradient":
-            element.setAttribute("cy",value.toString());
-        break;
-        default:
-        element.setAttribute("y",value.toString())
-    }
-}
-
-function setSingleAttributeTransformer(attribute: string, context: SVGElement, node: treeNode, env: Environment){
+function checkChildrenLengthForArgument(node: treeNode, length: number){
     if(node.children.length != 1){
-        throw new Error("bad number of arguments for "+attribute)
+        throw new Error("bad number of arguments for "+node.id)
     }
-    context.setAttribute(attribute,compile(node.children[0],env))
 }
 
-export{ compileAndRun}
+
+export{ compileAndRun, GetSVGFromCurrentPaperContext}

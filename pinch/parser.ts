@@ -2,7 +2,7 @@ import "ohm-js";
 import { grammar } from "ohm-js";
 import { NodeType, treeNode } from "./ast";
 import { compileAndRun } from "./svgGenerator";
-import { pnvGrammar } from "./gram/pmv.ohm";
+import { pnvGrammar } from "../gram/pmv.ohm";
 
 const g = grammar(pnvGrammar);
 
@@ -38,6 +38,10 @@ s.addOperation("toTree",{
         return new treeNode(NodeType.String, b.sourceString,[])
     },
     //@ts-ignore
+    rawjsLiteral(a,b,c){
+        return new treeNode(NodeType.RawJS, b.sourceString,[])
+    },
+    //@ts-ignore
     FlowOperation(a,b,c,d){
         let op = b.toTree()
         let block = []
@@ -48,6 +52,7 @@ s.addOperation("toTree",{
     PopOperation(a){
         return new treeNode(NodeType.Pop,"pop",[]);
     },
+    
     //@ts-ignore
     // StatementBlock(a,b,c){
     //     let children = b.children.map(x=>x.toTree());
@@ -76,16 +81,16 @@ s.addOperation("toTree",{
 })
 
 
-function CreateSVG(input: string): SVGElement{
+function CreatePinchDrawing(canvas: HTMLCanvasElement, input: string){
     let lex = g.match(input);
     if(lex.succeeded())
     {
         let ast = s(lex).toTree();
-        const svg = compileAndRun(ast);
-        return svg;
+        compileAndRun(canvas, ast);
+        return;
     }else{
         throw new Error(lex.message)
     }
 }
 
-export {CreateSVG}
+export {CreatePinchDrawing}

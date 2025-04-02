@@ -1,5 +1,5 @@
 {
-  "name": "pipesnvecs",
+  "name": "pinch",
   "module": "index.ts",
   "type": "module",
   "private": true,
@@ -17,7 +17,7 @@
     "codemirror": "^6.0.1",
     "fs": "^0.0.1-security",
     "ohm-js": "^17.1.0",
-    "pipesnvecs": ".",
-    "svg-pathdata": "^7.2.0"
+    "paper": "^0.12.18",
+    "pinch": "."
   }
 }
