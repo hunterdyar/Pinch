@@ -12,9 +12,7 @@ const localStorageKey = "pinchEditorValue"
 let starting = localStorage.getItem(localStorageKey);
 
 if(!starting){
-starting = "def center > \n| x 75\n| y 75\n. \n \n \n + circle 50 > \n | fill blue\n ."
-starting = `
-{ def dot
+starting = `{ def dot
 + circle 20 >
 | fill lightblue
 | stroke-width 2
@@ -22,12 +20,11 @@ starting = `
 }
 
 
-{ repeat @y 20 256 50
-{ repeat @x 20 256 50
+{ repeat @i 20 256 50
+{ repeat @j 20 256 50
   + dot >
-  | x x
-  | y y
-  | translate 7 7
+  | x i
+  | y j
 .
 }
 }
