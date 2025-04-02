@@ -14,7 +14,6 @@ class Environment  {
     defaults: Dict<string> = {
         "stroke": "black",
         "fill": "lightgrey",
-        "stroke-width": "5",
     }
     definitions: Dict<Procedure> = {} 
 
@@ -22,6 +21,10 @@ class Environment  {
         //root runtime group element.
         this.root = CreateGroupNode();
         //defaults
+        //@ts-ignore
+        this.root.elementValue.style["strokeColor"] = this.defaults["stroke"]
+        //@ts-ignore
+        this.root.elementValue.style["fillColor"] = this.defaults["fill"]
  
         this.stack.push(this.root)
     }
@@ -440,6 +443,7 @@ function compileFlowStatement(node: treeNode, env: Environment){
 
 function compileStandaloneObjectStatement(node:treeNode, env: Environment){
     env.active = null;
+    let path: paper.Path
     switch(node.id){
         case "group":
         case "g":
@@ -450,7 +454,6 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
             //setting radius inline is optional
             //var sig = getSignature(node.children.length,"circle");
             let sig = {}
-            let path: paper.Path
             if(node.children.length == 1){
                 let r = parseFloat(compile(node.children[0],env))
                 path = new paper.Path.Circle(paper.view.center,r);
@@ -473,29 +476,67 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
             break;
         case "rect":
 
-            // for(let i = 0;i<sig.length;i++){
-            //     let attr = compile(node.children[i],env)
-            //     if(attr != null ){
-            //         let attrName = sig[i]
-            //         if(attrName!= undefined){
-            //             //d.setAttribute(attrName,attr);
-            //         }else{
-            //             throw new Error("bad signature check?")
-            //         }
-            //     }else{
-            //         throw new Error("bad signature?");
-            //     }
-            // }
+        if(node.children.length == 1){
+            let size = parseFloat(compile(node.children[0],env))
+            let tr = new paper.Point(paper.view.center.x-size/2,paper.view.center.y+size/2)
+            let s = new paper.Size(size,size)
+            path = new paper.Path.Rectangle(tr,s);
             
-            let rect = new paper.Path.Rectangle(new Point(0,0),new Point(20,20))
-           // d.setAttribute("x","0")
-           // d.setAttribute("y","0")
-           // d.setAttribute("stroke",env.getDefault("stroke"))
-          //  d.setAttribute("fill",env.getDefault("fill"))
-          //  d.setAttribute("stroke-width", env.getDefault("stroke-width"))
-        
-            env.active = CreateElementNode(rect)
+        }else if(node.children.length == 2){
+            let width = parseFloat(compile(node.children[0],env))
+            let height = parseFloat(compile(node.children[1],env))
+            let tr = new paper.Point(paper.view.center.x-width/2,paper.view.center.y+height/2)
+            let bl = new paper.Point(paper.view.center.x+width/2,paper.view.center.y-height/2)
+            path = new paper.Path.Rectangle(tr,bl);
+
+        }else if(node.children.length == 4){
+            let x = parseFloat(compile(node.children[0],env))
+            let y = parseFloat(compile(node.children[1],env))
+            let w = parseFloat(compile(node.children[2],env))
+            let h = parseFloat(compile(node.children[3],env))
+            let pos = new paper.Point(x,y)
+            let s = new paper.Size(w,h)
+            path = new paper.Path.Rectangle(pos,s);
+
+        }else{
+            throw new Error("Rect: bad number of arguments. Want 1 (square size) or 2 (width height) or 4 (x y width height)")
+        }
+            
+        env.active = CreateElementNode(path)
+
             break;
+        case "line":
+            if(node.children.length == 4){
+                let x1 = parseFloat(compile(node.children[0],env))
+                let y1 = parseFloat(compile(node.children[1],env))
+                let x2 = parseFloat(compile(node.children[2],env))
+                let y2 = parseFloat(compile(node.children[3],env))
+                let a = new paper.Point(x1,y1)
+                let b = new paper.Point(x2,y2)
+                path = new paper.Path.Line(a,b);
+            }else{
+                throw new Error("Line: bad number of arguments. Want 4 (x1 y1 x2 y2)")
+            }
+            env.active = CreateElementNode(path);
+        break;
+        case "polygon":
+            if(node.children.length == 2){
+                let sides = parseFloat(compile(node.children[0],env))
+                let radius = parseFloat(compile(node.children[1],env))
+                path = new paper.Path.RegularPolygon(paper.view.center,sides,radius);
+            }else if(node.children.length == 4){
+                let x = parseFloat(compile(node.children[0],env))
+                let y = parseFloat(compile(node.children[1],env))
+                let sides = parseFloat(compile(node.children[2],env))
+                let radius = parseFloat(compile(node.children[3],env))
+                let a = new paper.Point(x,y)
+                path = new paper.Path.RegularPolygon(a,sides,radius);
+            }
+            else{
+                throw new Error("Line: bad number of arguments. Want 2 (sides radius) or 4 (x y sides radius)")
+            }
+            env.active = CreateElementNode(path);
+        break;
         default:
             //def lookup!            
             if(!tryRunDefinitionLookup(node.id,env)){
