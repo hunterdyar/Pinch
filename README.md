@@ -1,6 +1,8 @@
 # Pinch
 This is an experimental stack-based programming language for procedurally creating vector graphics.
 
+ ![A sketch of a stopsign](./documentation/stopsign.png)
+
 ## About
 It transpiles code into vector images. 
 
