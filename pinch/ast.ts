@@ -212,7 +212,6 @@ class RuntimeGroup extends RuntimeElement {
         this.item = new paper.Group();
     }
     override Render(): paper.Item{
-        console.log("render group")
         this.children.forEach(c=>{
             //set styles if not set.
             for(let key in this.style){

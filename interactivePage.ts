@@ -61,8 +61,11 @@ let view = new EditorView({
 function draw(code:string){
    // let text = inputBox.value
    try {
+        let stime = Date.now();
         CreatePinchDrawing(output, code);
         errorp.innerText = ""
+        let end = Date.now();
+        console.log("done in "+(end-stime).toString()+"ms");
     } catch (error: any) {
         console.error(error)
         errorp.innerText = error.toString()

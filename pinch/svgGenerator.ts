@@ -218,7 +218,6 @@ function compile(node:treeNode, env: Environment){
             if(env.active != null){
                 c = env.peek();
                 if(c != null){
-                    console.log("appending during default context")
                     c.appendChildElement(env.active)
                 }
             }   
