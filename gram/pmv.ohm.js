@@ -39,7 +39,7 @@ bodyDelim = ("\n" | ";")
 	 // String things taken from JS examples but no raw unicode or unicode escape sequence.
      //for now, just keeping it simple while i can.
   stringLiteral = "\"" doubleStringCharacter* "\""
-                | "'" singleStringCharacter* "'"
+ //               | "'" singleStringCharacter* "'"
   doubleStringCharacter = ~("\"" | "\\" | lineTerminator) sourceCharacter -- nonEscaped
                         | "\\" characterEscapeSequence                             -- escaped
                         | lineContinuation                                -- lineContinuation
@@ -51,7 +51,9 @@ bodyDelim = ("\n" | ";")
                           | nonEscapeCharacter
   singleEscapeCharacter = "'" | "\"" | "\\" | "b" | "f" | "n" | "r" | "t" | "v"
   nonEscapeCharacter = ~(characterEscapeSequence | lineTerminator) sourceCharacter
-    
+
+  rawjsLiteral = "'" (~"'" sourceCharacter)* "'"
+
     
 	sc = space* (";" | end)
      | spacesNoNL (lineTerminator | &".")
@@ -71,6 +73,8 @@ bodyDelim = ("\n" | ";")
     ~operator ident
     | ~operator number
     | ~operator stringLiteral
+    | ~operator rawjsLiteral
+
     
     Statement = 
     MetaStatement

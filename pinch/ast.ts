@@ -7,6 +7,7 @@ enum NodeType {
     ObjectStatement,
     Number,
     String,
+    RawJS,
     Identifier,
     Label,
     Push,

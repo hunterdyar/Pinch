@@ -38,6 +38,11 @@ s.addOperation("toTree",{
         return new treeNode(NodeType.String, b.sourceString,[])
     },
     //@ts-ignore
+    rawjsLiteral(a,b,c){
+        console.log("raw",b.sourceString)
+        return new treeNode(NodeType.RawJS, b.sourceString,[])
+    },
+    //@ts-ignore
     FlowOperation(a,b,c,d){
         let op = b.toTree()
         let block = []
@@ -48,6 +53,7 @@ s.addOperation("toTree",{
     PopOperation(a){
         return new treeNode(NodeType.Pop,"pop",[]);
     },
+    
     //@ts-ignore
     // StatementBlock(a,b,c){
     //     let children = b.children.map(x=>x.toTree());

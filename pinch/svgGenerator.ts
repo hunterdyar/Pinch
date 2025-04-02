@@ -105,6 +105,24 @@ class Environment  {
             throw new Error("Can't Pop Frame")
         }
     }
+    printJSFrame():string {
+        var print = ""
+        for(let f = this.frames.length-1;f>=0;f--){
+            const fr = this.frames[f];
+            if(fr){
+                for(let v in fr)
+                {
+                    let val = fr[v];
+                    if(val){
+                        print += "let "+v+" = "
+                        print += val.getStringValue()
+                        print +=";\n"
+                    }
+                }
+            }
+        }
+        return print;
+    }
     setLocal(id: string, val: RuntimeNode){
         if(this.frames.length >= 1){
             let frame = this.frames[this.frames.length-1];
@@ -270,6 +288,13 @@ function compile(node:treeNode, env: Environment){
             node.children.forEach(n=>{
                 compile(n,env);
             })
+            break;
+        case NodeType.RawJS:
+            //todo: rawJS is a hacky workaround to do inline math expressions without having to use node transformers for math (we don't have "normal" binary operators.)
+            //eventually, i'll just write the inline math functions as shorthand for the pipeline flow. Maybe backticks for inline, or single quotes like right now.
+            //for now, | * 3 will multiply the context by three, not the left by three.... 
+            let expression = "'use strict';\n"+env.printJSFrame()+"\n"+node.id
+            return eval?.(expression) 
             break;
         default: 
             console.log("unhandled:",node)
