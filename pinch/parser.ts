@@ -39,7 +39,6 @@ s.addOperation("toTree",{
     },
     //@ts-ignore
     rawjsLiteral(a,b,c){
-        console.log("raw",b.sourceString)
         return new treeNode(NodeType.RawJS, b.sourceString,[])
     },
     //@ts-ignore
