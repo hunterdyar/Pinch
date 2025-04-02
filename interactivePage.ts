@@ -1,7 +1,7 @@
 import { basicSetup } from "codemirror";
 import {EditorState, StateField} from "@codemirror/state"
 import {EditorView, keymap, ViewPlugin} from "@codemirror/view"
-import {defaultKeymap} from "@codemirror/commands"
+import {defaultKeymap, indentWithTab} from "@codemirror/commands"
 import { CreatePinchDrawing } from "./pinch/parser";
 import {GetSVGFromCurrentPaperContext } from "./pinch/svgGenerator"
 console.log("Starting!");
@@ -50,7 +50,7 @@ const drawSVGOnChangePlugin = ViewPlugin.fromClass(class {
 
 let startState = EditorState.create({
     doc: starting,
-    extensions: [drawSVGOnChangePlugin,basicSetup,keymap.of(defaultKeymap)]
+    extensions: [drawSVGOnChangePlugin,basicSetup,keymap.of(defaultKeymap), keymap.of(indentWithTab)]
 })
 
 let view = new EditorView({
