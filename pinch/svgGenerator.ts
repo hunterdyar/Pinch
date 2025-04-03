@@ -656,7 +656,7 @@ function compilePopStatement(node: treeNode ,args: RuntimeNode[], env: Environme
             let ae = args[0]?.elementValue
             let be = args[1]?.elementValue
             if(!ae || !be){
-                throw new Error("invalid runtime ")
+                throw new Error("invalid runtime node")
             }
             if(ae.type != RuntimeElementType.Path || be.type != RuntimeElementType.Path){
                 throw new Error("Cannot perform boolean on group (yet)");
@@ -667,6 +667,20 @@ function compilePopStatement(node: treeNode ,args: RuntimeNode[], env: Environme
             //new path item, now replace a.
             //env.peek().elementValue.item = path;
             env.active = CreateElementNode(path)
+            // a pop operator also pushes back to the stack.
+        break;
+        case "append":
+            if(args.length != 1){
+                throw new Error("Append popop must have 2 elements e.g:(.append)")
+            }
+            let appe = args[0]
+            if(!appe){
+                throw new Error("invalid runtime node")
+            }
+            
+            //new path item, now replace a.
+            //env.peek().elementValue.item = path;
+            env.peek().appendChildElement(appe)
             // a pop operator also pushes back to the stack.
         break;
         default:
