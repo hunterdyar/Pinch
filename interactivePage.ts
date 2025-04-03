@@ -8,6 +8,8 @@ console.log("Starting!");
 const inputContainer = document.getElementById("inputContainer") as HTMLDivElement
 const output = document.getElementById("outputCanvas") as HTMLCanvasElement
 const errorp = document.getElementById("errorArea") as HTMLParagraphElement
+const exportsvg = document.getElementById("exportSVGButton") as HTMLButtonElement
+const exportpng = document.getElementById("exportPNGButton") as HTMLButtonElement
 const localStorageKey = "pinchEditorValue"
 let starting = localStorage.getItem(localStorageKey);
 
@@ -69,6 +71,27 @@ function draw(code:string){
     }  
 }
 
+exportsvg.onclick = (e)=>{
+  getSVG();
+}
+exportpng.onclick = (e)=>{getPNG();}
+
+let downloadLink = document.createElement('a')
+const serializer = new XMLSerializer();
 function getSVG(){
-  console.log("svg",GetSVGFromCurrentPaperContext())
+  let svg = GetSVGFromCurrentPaperContext() as SVGElement;
+  var url = "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(serializer.serializeToString(svg));
+  
+  downloadLink.download = 'pinch.svg'
+  downloadLink.href = url;
+  downloadLink.click();
+}
+
+function getPNG(){
+  let dataURL = output.toDataURL('image/png');
+  let url = dataURL.replace(/^data:image\/png/,'data:application/octet-stream');
+
+  downloadLink.href = url;
+  downloadLink.download = "pinch.png"
+  downloadLink.click();
 }
