@@ -650,23 +650,26 @@ function compilePopStatement(node: treeNode ,args: RuntimeNode[], env: Environme
     console.log("pop statement",node.id, args)
     switch(node.id){
         case "subtract":
-            if(args.length != 2){
+            if(args.length == 2){
+                    
+                let ae = args[0]?.elementValue
+                let be = args[1]?.elementValue
+                if(!ae || !be){
+                    throw new Error("invalid runtime node")
+                }
+                if(ae.type != RuntimeElementType.Path || be.type != RuntimeElementType.Path){
+                    throw new Error("Cannot perform boolean on group (yet)");
+                }
+                let a = ae.item as paper.Path
+                let b = be.item as paper.Path
+                let path = a.exclude(b);
+                //new path item, now replace a.
+                //env.peek().elementValue.item = path;
+                env.active = CreateElementNode(path)
+            }else{
+                //if we only have one argument, it could modify the prior object, while two will pop both, subtract them, set active.
                 throw new Error("Subtract popop must have 2 elements e.g:(..subtract)")
             }
-            let ae = args[0]?.elementValue
-            let be = args[1]?.elementValue
-            if(!ae || !be){
-                throw new Error("invalid runtime node")
-            }
-            if(ae.type != RuntimeElementType.Path || be.type != RuntimeElementType.Path){
-                throw new Error("Cannot perform boolean on group (yet)");
-            }
-            let a = ae.item as paper.Path
-            let b = be.item as paper.Path
-            let path = a.exclude(b);
-            //new path item, now replace a.
-            //env.peek().elementValue.item = path;
-            env.active = CreateElementNode(path)
             // a pop operator also pushes back to the stack.
         break;
         case "append":
