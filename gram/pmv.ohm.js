@@ -102,7 +102,7 @@ objectStatement =
 | ident whitespace? listOf<object,whitespace>
     
     PushOperation =
-    (ObjectStatement | AppendOperation) doPush
+    (ObjectStatement | AppendOperation | PopOperation) doPush
     AppendOperation =
     doAppend objectStatement
     Transformation

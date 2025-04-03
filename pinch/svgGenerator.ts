@@ -188,10 +188,11 @@ function compileAndRun(canvas: HTMLCanvasElement, root: treeNode){
         compile(child, environment);
     });
 
-    if(environment.stack.length != 1){
-        throw new Error("The stack is "+environment.stack.length+". It should end at 1 (root svg)");
-    }
-    environment.stack.pop();
+    environment.stack.forEach((rt:RuntimeNode)=>{
+        console.log("render stack", rt);
+        rt.elementValue?.Render();
+    });
+    
     environment.root.elementValue?.Render();
 
     return
@@ -662,12 +663,11 @@ function compilePopStatement(node: treeNode ,args: RuntimeNode[], env: Environme
             }
             let a = ae.item as paper.Path
             let b = be.item as paper.Path
-            let path = a.subtract(b);
+            let path = a.exclude(b);
             //new path item, now replace a.
             //env.peek().elementValue.item = path;
-            env.peek().appendChildElement(CreateElementNode(path))
+            env.active = CreateElementNode(path)
             // a pop operator also pushes back to the stack.
-            //env.push(env.active);
         break;
         default:
             throw new Error("Unknown Pop Statement "+node.id)
