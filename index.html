@@ -13,16 +13,19 @@
                 left: 0;
                 right: 0;
                 display: grid;
-                grid-template-columns: auto auto;
+                grid-template-areas:
+                    'header header header'
+                    'editor dragbar output'
+                    'footer footer footer';
+                grid-template-columns: 2fr 4px 2fr;
                 grid-template-rows: 6em 1fr 2em;
            }
            section{
-                overflow: hidden;
+                overflow: auto;
            }
            .header{
                 padding-left: 1em;
-                grid-column-start: 1;
-                grid-column-end: 3;
+                grid-area: header;
            }
            .footer{
                 padding-left: 1em;
@@ -30,25 +33,24 @@
                 width: 100%;
                 bottom: 0;
                 background-color: ghostwhite;
-                grid-row-start: 3;
-                grid-column-start:1;
-                grid-column-end: 3; 
+                grid-area: footer;
             }
-
+            #dragbar{
+                grid-area: dragbar;
+                background-color: black;
+                height: 100%;
+                cursor: ew-resize;
+            }
            .editor{
                 margin-left: 0;
            }
+
            .textentry{
                 margin-left: 0;
-                grid-row-start: 2;
-                grid-row-end: 3;
-                grid-column-start: 1;
-                grid-column-end: 2;
+                grid-area: editor;
            }
            .output{
-                grid-column-start: 2;
-                grid-column-end: 3;
-                grid-row-end: 3;
+                grid-area: output;
                 background-color: grey;
            }
            .canvasContainer{
@@ -71,32 +73,63 @@
            #inputContainer{
                 overflow: hidden;
            }
+           .cm-editor{
+            width: 100%;
+           }
         </style>
     </head>
 
-    <body><article>
+    <body><article id="container">
         <section class="header">
             <h2>Pinch</h2>
             <p>A Language for 2D Vector Graphics</p>
         </section>
-        <section class="textentry">
+        <section id="textentry" class="textentry">
             <div id="inputContainer"></div>
             <div>
                 <p id="errorArea"></p>
             </div>
         </section>
-        <section class="output">
+        <div id="dragbar"></div>
+        <section id ="preview" class="output">
             <div class="canvasContainer">
                 <canvas id ="outputCanvas" >
                 </canvas>
             </div>
         </div>
     </section>
-    <section class="footer">
+    <!-- <section class="footer">
         <p>By <a href="http://hdyar.com" target="_blank"> Hunter Dyar</a>. <a href="https://github.com/hunterdyar/pinch" target="_blank">Source on GitHub</a>.</p>
-    </section>
+    </section> -->
     </article>
         <!-- <script src="ast.js"></script> -->
         <script src="./interactivePage.ts" type="module"></script>
+        <script>
+            const dragbar = document.getElementById("dragbar");
+            const textentryPane = document.getElementById("textentry");
+            const editorPane = document.getElementById("editorPane");
+            const articleContainer = document.getElementById("container");
+            let isDragging = false;
+            dragbar.onmousedown= StartDrag;
+            document.onmousemove = OnDrag;
+            document.onmouseup = EndDrag;
+            function StartDrag(){
+                isDragging = true;
+            }
+            function OnDrag(event){
+                if(!isDragging){return;}
+
+                let leftWidth = event.clientX;
+                let rightWidth = articleContainer.clientWidth - event.clientX;
+                let dragbarWidth = 4;
+                let cols = [leftWidth, dragbarWidth, rightWidth]
+                let newColDefn = cols.map(c => c.toString() + "px").join(" ");
+                articleContainer.style.gridTemplateColumns = newColDefn;
+            }
+            function EndDrag(){
+                isDragging = false;
+            }
+            
+        </script>
     </body>
 </html>
