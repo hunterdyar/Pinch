@@ -49,15 +49,17 @@ s.addOperation("toTree",{
         return new treeNode(NodeType.Flow,op.id,[op,block]);
     },
     //@ts-ignore
-    PopOperation(a){
-        return new treeNode(NodeType.Pop,"pop",[]);
+    PopOperation(a,b){
+        if(b.children.length == 0){
+            return new treeNode(NodeType.Pop,"pop",[a.children.length]);
+        }else{
+            if(b.children[0]){
+            return new treeNode(NodeType.Pop,"pop",[a.children.length, b.children[0].toTree()]);
+            }else{
+                throw new Error("invalid parse somehow");
+            }
+        }
     },
-    
-    //@ts-ignore
-    // StatementBlock(a,b,c){
-    //     let children = b.children.map(x=>x.toTree());
-    //     return new treeNode(NodeType.Block,"{}",children);
-    // },
     //@ts-ignore
     label(a,b){
         return new treeNode(NodeType.Label,b.sourceString,[])

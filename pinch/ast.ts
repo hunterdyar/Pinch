@@ -91,7 +91,7 @@ class RuntimeNode {
     }
 }
 
-function CreateElementNode(shape: paper.Path){
+function CreateElementNode(shape: paper.Path | paper.PathItem){
     var r = new RuntimeNode();
     r.type = RuntimeType.Element;
     r.elementValue = new RuntimeItem(shape);
@@ -196,7 +196,7 @@ abstract class RuntimeElement {
 class RuntimeItem extends RuntimeElement{
     item: paper.PathItem
 
-    constructor(shape: paper.Path){
+    constructor(shape: paper.Path | paper.PathItem){
         super()
         this.item = shape;
         this.type = RuntimeElementType.Path
@@ -245,4 +245,4 @@ class RuntimeGroup extends RuntimeElement {
     }
 }
 
-export {NodeType, treeNode, Procedure, RuntimeNode, RuntimeType, RuntimeItem, RuntimeGroup, RuntimeElement, CreateElementNode, CreateGroupNode, CreateProcedureNode, CreateNumberNode}
+export {NodeType, treeNode, Procedure, RuntimeNode, RuntimeType, RuntimeItem, RuntimeGroup, RuntimeElement, RuntimeElementType, CreateElementNode, CreateGroupNode, CreateProcedureNode, CreateNumberNode}

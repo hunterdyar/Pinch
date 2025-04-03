@@ -1,5 +1,5 @@
 import { Point } from "paper/dist/paper-core";
-import { NodeType, treeNode, Procedure, RuntimeNode, RuntimeElement, RuntimeItem, RuntimeGroup, CreateElementNode,CreateGroupNode, CreateProcedureNode,CreateNumberNode, RuntimeType } from "./ast";
+import { NodeType, treeNode, Procedure, RuntimeNode, RuntimeElementType, RuntimeItem, CreateElementNode,CreateGroupNode, CreateProcedureNode,CreateNumberNode, RuntimeType } from "./ast";
 import { getSignature } from "./methodSigs";
 import paper from "paper";
 
@@ -218,12 +218,13 @@ function compile(node:treeNode, env: Environment){
             compileStandaloneObjectStatement(node,env) 
             //append! let empty object statements be equivalent to append.
             //todo: i want to move that logic to the lexer.
-            if(env.active != null){
-                c = env.peek();
-                if(c != null){
-                    c.appendChildElement(env.active)
-                }
-            }   
+            // if(env.active != null){
+            //     c = env.peek();
+            //     if(c != null){
+            //         //todo: we should push 
+            //         c.appendChildElement(env.active)
+            //     }
+            // }   
             break;
         case NodeType.Transformation:
             let ctx = env.peek();
@@ -281,7 +282,23 @@ function compile(node:treeNode, env: Environment){
                 }
             }
             //else
-            env.pop();
+            //normal pop with no command next to it.
+            if(node.children.length == 1){
+                //pop the number of dots.
+                for(let pops = 0;pops<node.children[0];pops++){
+                    env.pop();
+                }
+            }else if(node.children.length == 2){
+
+                let poppedChilds = []
+                //pop the number of dots and shove em into a list for us to use...
+                for(let pops = 0;pops<node.children[0];pops++){
+                    poppedChilds.push(env.pop());
+                }
+                compilePopStatement(node.children[1],poppedChilds,env);
+            }else{
+                throw new Error("Parsing error? bad number children for pop statement.")
+            }
             break;
         case NodeType.Flow:
             compileFlowStatement(node,env);
@@ -546,20 +563,6 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
     //
 }
 
-function tryRunDefinitionLookup(id: string, env:Environment):boolean{
-    if(env.hasDefinition(id)){
-        //push?
-
-        let body = env.getDefinition(id)
-        body.forEach(x=>{
-            compile(x,env);
-        });
-
-        return true
-    }
-    return false
-}
-
 function compileTransformation(node:treeNode, env: Environment){
     let contextNode = env.peek()
     if(contextNode.type != RuntimeType.Element){
@@ -640,6 +643,49 @@ function compileTransformation(node:treeNode, env: Environment){
         default:
             throw new Error("Unknown Transformation "+node.id);
     }
+}
+
+function compilePopStatement(node: treeNode ,args: RuntimeNode[], env: Environment){
+    console.log("pop statement",node.id, args)
+    switch(node.id){
+        case "subtract":
+            if(args.length != 2){
+                throw new Error("Subtract popop must have 2 elements e.g:(..subtract)")
+            }
+            let ae = args[0]?.elementValue
+            let be = args[1]?.elementValue
+            if(!ae || !be){
+                throw new Error("invalid runtime ")
+            }
+            if(ae.type != RuntimeElementType.Path || be.type != RuntimeElementType.Path){
+                throw new Error("Cannot perform boolean on group (yet)");
+            }
+            let a = ae.item as paper.Path
+            let b = be.item as paper.Path
+            let path = a.subtract(b);
+            //new path item, now replace a.
+            //env.peek().elementValue.item = path;
+            env.peek().appendChildElement(CreateElementNode(path))
+            // a pop operator also pushes back to the stack.
+            //env.push(env.active);
+        break;
+        default:
+            throw new Error("Unknown Pop Statement "+node.id)
+    }
+}
+
+function tryRunDefinitionLookup(id: string, env:Environment):boolean{
+    if(env.hasDefinition(id)){
+        //push?
+
+        let body = env.getDefinition(id)
+        body.forEach(x=>{
+            compile(x,env);
+        });
+
+        return true
+    }
+    return false
 }
 
 function checkChildrenLengthForArgument(node: treeNode, length: number){
