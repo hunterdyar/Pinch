@@ -133,8 +133,11 @@
             dragbar.onmousedown= StartDrag;
             document.onmousemove = OnDrag;
             document.onmouseup = EndDrag;
-            function StartDrag(){
-                isDragging = true;
+            function StartDrag(e){
+                if(!isDragging){
+                 isDragging = true;
+                    e.preventDefault();
+                }
             }
             function OnDrag(event){
                 if(!isDragging){return;}
