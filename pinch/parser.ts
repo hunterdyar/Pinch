@@ -1,7 +1,7 @@
 import "ohm-js";
 import { grammar } from "ohm-js";
 import { NodeType, treeNode } from "./ast";
-import { compileAndRun } from "./svgGenerator";
+import { compileAndRun } from "./compiler";
 import { pnvGrammar } from "../gram/pmv.ohm";
 
 const g = grammar(pnvGrammar);

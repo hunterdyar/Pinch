@@ -3,7 +3,7 @@ import {EditorState, StateField} from "@codemirror/state"
 import {EditorView, keymap, ViewPlugin} from "@codemirror/view"
 import {defaultKeymap, indentWithTab} from "@codemirror/commands"
 import { CreatePinchDrawing } from "./pinch/parser";
-import {GetSVGFromCurrentPaperContext } from "./pinch/svgGenerator"
+import {GetSVGFromCurrentPaperContext } from "./pinch/compiler"
 console.log("Starting!");
 const inputContainer = document.getElementById("inputContainer") as HTMLDivElement
 const output = document.getElementById("outputCanvas") as HTMLCanvasElement
