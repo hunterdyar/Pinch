@@ -61,12 +61,18 @@ let view = new EditorView({
 function draw(code:string){
    // let text = inputBox.value
    try {
-        performance.mark("compile-start");
+        performance.mark("pinch-start");
         CreatePinchDrawing(output, code);
         errorp.innerText = ""
-        performance.mark("compile-end");
-        const perf = performance.measure("compile","compile-start","compile-end");
-        metricResult.innerText = "done in "+perf.duration+"ms"
+        performance.mark("pinch-end");
+        const parsePerf = performance.measure("pinch-parse","pinch-start","parse-end");
+        const compPerf = performance.measure("pinch-compile","parse-end","compile-end");
+        const renderPerf = performance.measure("pinch-render","compile-end","pinch-end");
+        const totalPerf = performance.measure("parse","pinch-start","pinch-end");
+        metricResult.innerText = totalPerf.duration+"ms:" +
+                              " parse "+parsePerf.duration+"ms" +
+                              " compile "+compPerf.duration+"ms" +
+                              " render "+renderPerf.duration+"ms"
     } catch (error: any) {
         console.error(error)
         errorp.innerText = error.toString()

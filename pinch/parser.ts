@@ -86,6 +86,7 @@ function CreatePinchDrawing(canvas: HTMLCanvasElement, input: string){
     if(lex.succeeded())
     {
         let ast = s(lex).toTree();
+        performance.mark("parse-end");
         compileAndRun(canvas, ast);
         return;
     }else{

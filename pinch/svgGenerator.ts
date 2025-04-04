@@ -187,7 +187,7 @@ function compileAndRun(canvas: HTMLCanvasElement, root: treeNode){
         //@ts-ignore
         compile(child, environment);
     });
-
+    performance.mark("compile-end")
     if(environment.stack.length != 1){
         throw new Error("The stack is "+environment.stack.length+". It should end at 1 (root svg)");
     }
