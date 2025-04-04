@@ -88,21 +88,22 @@ bodyDelim = ("\n" | ";")
   | AppendOperation
   | objectStatement
   
-   MetaStatement =
+  MetaStatement =
   | PushOperation
-  | PopOperation
+  | popOperation
   | FlowOperation
 
 
-PopOperation =
-| (doPop ~whitespace)+ ObjectStatement?
+popOperation =
+| (doPop ~whitespace)+ doAppend
+| (doPop ~whitespace)+ objectStatement?
 
 objectStatement =
 //| ident Object #sc?
 | ident whitespace? listOf<object,whitespace>
     
     PushOperation =
-    (ObjectStatement | AppendOperation | PopOperation) doPush
+    (ObjectStatement | AppendOperation | popOperation) doPush
     AppendOperation =
     doAppend objectStatement
     Transformation
