@@ -10,6 +10,7 @@ const output = document.getElementById("outputCanvas") as HTMLCanvasElement
 const errorp = document.getElementById("errorArea") as HTMLParagraphElement
 const exportsvg = document.getElementById("exportSVGButton") as HTMLButtonElement
 const exportpng = document.getElementById("exportPNGButton") as HTMLButtonElement
+const metricResult = document.getElementById("metrics") as HTMLParagraphElement
 const localStorageKey = "pinchEditorValue"
 let starting = localStorage.getItem(localStorageKey);
 
@@ -60,14 +61,16 @@ let view = new EditorView({
 function draw(code:string){
    // let text = inputBox.value
    try {
-        let stime = Date.now();
+        performance.mark("compile-start");
         CreatePinchDrawing(output, code);
         errorp.innerText = ""
-        let end = Date.now();
-        console.log("done in "+(end-stime).toString()+"ms");
+        performance.mark("compile-end");
+        const perf = performance.measure("compile","compile-start","compile-end");
+        metricResult.innerText = "done in "+perf.duration+"ms"
     } catch (error: any) {
         console.error(error)
         errorp.innerText = error.toString()
+        metricResult.innerText = "error"
     }  
 }
 
