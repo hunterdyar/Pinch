@@ -101,3 +101,6 @@ The @ symbol names a local variable within a flow operation. Repeat takes an opt
 }
 ```
 
+---
+#### Attribution
+[SVG](https://tabler.io/icons/icon/file-type-svg) and [PNG](https://tabler.io/icons/icon/file-type-png) icons by [Tabler](https://tabler.io/icons) icons. [MIT License](https://tabler.io/license).

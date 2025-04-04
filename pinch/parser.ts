@@ -1,7 +1,7 @@
 import "ohm-js";
 import { grammar } from "ohm-js";
 import { NodeType, treeNode } from "./ast";
-import { compileAndRun } from "./svgGenerator";
+import { compileAndRun } from "./compiler";
 import { pnvGrammar } from "../gram/pmv.ohm";
 
 const g = grammar(pnvGrammar);
@@ -93,6 +93,7 @@ function CreatePinchDrawing(canvas: HTMLCanvasElement, input: string){
     if(lex.succeeded())
     {
         let ast = s(lex).toTree();
+        performance.mark("parse-end");
         compileAndRun(canvas, ast);
         return;
     }else{
