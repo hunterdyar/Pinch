@@ -376,6 +376,26 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
             }
             env.active = CreateElementNode(path);
         break;
+        case "text":
+            if(node.children.length == 1){
+                let content = compile(node.children[0],env)
+                let textitem = new paper.PointText(paper.view.center);
+                // textitem.content = content;
+                // env.active = CreateElementNode(textitem);
+
+            }else if(node.children.length == 3){
+                let x = parseFloat(compile(node.children[0],env))
+                let y = parseFloat(compile(node.children[1],env))
+                let content = compile(node.children[2],env)
+                let a = new paper.Point(x,y)
+                let textitem = new paper.PointText(a);
+                // textitem.content = content;
+                // env.active = CreateElementNode(textitem);
+            }
+            else{
+                throw new Error("Text: bad number of arguments. Want 1 (text) or 3 (x y text)")
+            }
+            break
         default:
             //def lookup!            
             if(!tryRunDefinitionLookup(node.id,env)){
