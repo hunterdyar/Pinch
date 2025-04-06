@@ -510,193 +510,21 @@ function compilePopStatement(node: treeNode ,args: RuntimeNode[], env: Environme
     console.log("pop statement",node.id, args)
     switch(node.id){
         case "subtract":
-            if(args.length == 1){                    
-                let ae = args[0]?.elementValue
-                let be = env.peek().elementValue
-                if(!ae || !be){
-                    throw new Error("invalid runtime node")
-                }
-                if(ae.type != RuntimeElementType.Path || be.type != RuntimeElementType.Path){
-                    throw new Error("Cannot perform boolean on group (yet)");
-                }
-                let a = ae.item as paper.PathItem
-                let b = be.item as paper.PathItem
-                let path = b.subtract(a);
-                
-                be.item = path
-            }else if(args.length == 2){
-                    
-                let ae = args[0]?.elementValue
-                let be = args[1]?.elementValue
-                if(!ae || !be){
-                    throw new Error("invalid runtime node")
-                }
-                if(ae.type != RuntimeElementType.Path || be.type != RuntimeElementType.Path){
-                    throw new Error("Cannot perform boolean on group (yet)");
-                }
-                let a = ae.item as paper.Path
-                let b = be.item as paper.Path
-                let path = b.subtract(a);
-                //new path item, now replace a.
-                //env.peek().elementValue.item = path;
-                env.active = CreateElementNode(path)
-            }else{
-                //if we only have one argument, it could modify the prior object, while two will pop both, subtract them, set active.
-                throw new Error("Subtract popop must pop 1 (.subtract, modifies top) or 2 (..subtract, creates new) stack arguments")
-            }
-            // a pop operator also pushes back to the stack.
+            doBooleanOp("subtract",args,env);
         break;
         case "intersect":
-            if(args.length == 1){                    
-                let ae = args[0]?.elementValue
-                let be = env.peek().elementValue
-                if(!ae || !be){
-                    throw new Error("invalid runtime node")
-                }
-                if(ae.type != RuntimeElementType.Path || be.type != RuntimeElementType.Path){
-                    throw new Error("Cannot perform boolean on group (yet)");
-                }
-                let a = ae.item as paper.PathItem
-                let b = be.item as paper.PathItem
-                
-                let path = a.intersect(b);
-                
-                be.item = path
-                //env.active = CreateElementNode(path)
-            }else if(args.length == 2){
-                    
-                let ae = args[0]?.elementValue
-                let be = args[1]?.elementValue
-                if(!ae || !be){
-                    throw new Error("invalid runtime node")
-                }
-                if(ae.type != RuntimeElementType.Path || be.type != RuntimeElementType.Path){
-                    throw new Error("Cannot perform boolean on group (yet)");
-                }
-                let a = ae.item as paper.Path
-                let b = be.item as paper.Path
-                let path = a.intersect(b);
-                //new path item, now replace a.
-                //env.peek().elementValue.item = path;
-                env.active = CreateElementNode(path)
-            }else{
-                //if we only have one argument, it could modify the prior object, while two will pop both, subtract them, set active.
-                throw new Error("Intersect popop must pop 1 (.intersect, modifies top) or 2 (..intersect, creates new) stack arguments")
-            }
-            // a pop operator also pushes back to the stack.
+            doBooleanOp("intersect",args,env);
         break;
         case "exclude":
-            if(args.length == 1){                    
-                let ae = args[0]?.elementValue
-                let be = env.peek().elementValue
-                if(!ae || !be){
-                    throw new Error("invalid runtime node")
-                }
-                if(ae.type != RuntimeElementType.Path || be.type != RuntimeElementType.Path){
-                    throw new Error("Cannot perform boolean on group (yet)");
-                }
-                let a = ae.item as paper.PathItem
-                let b = be.item as paper.PathItem
-                let path = a.exclude(b);
-                
-                be.item = path
-                //env.active = CreateElementNode(path)
-            }else if(args.length == 2){
-                    
-                let ae = args[0]?.elementValue
-                let be = args[1]?.elementValue
-                if(!ae || !be){
-                    throw new Error("invalid runtime node")
-                }
-                if(ae.type != RuntimeElementType.Path || be.type != RuntimeElementType.Path){
-                    throw new Error("Cannot perform boolean on group (yet)");
-                }
-                let a = ae.item as paper.Path
-                let b = be.item as paper.Path
-                let path = a.exclude(b);
-                //new path item, now replace a.
-                //env.peek().elementValue.item = path;
-                env.active = CreateElementNode(path)
-            }else{
-                //if we only have one argument, it could modify the prior object, while two will pop both, subtract them, set active.
-                throw new Error("Exclude popop must pop 1 (.exc;ude, modifies top) or 2 (..exclude, creates new) stack arguments")
-            }
-            // a pop operator also pushes back to the stack.
+            doBooleanOp("exclude",args,env);
         break;
         case "unite":
-            if(args.length == 1){                    
-                let ae = args[0]?.elementValue
-                let be = env.peek().elementValue
-                if(!ae || !be){
-                    throw new Error("invalid runtime node")
-                }
-                if(ae.type != RuntimeElementType.Path || be.type != RuntimeElementType.Path){
-                    throw new Error("Cannot perform boolean on group (yet)");
-                }
-                let a = ae.item as paper.PathItem
-                let b = be.item as paper.PathItem
-                let path = a.unite(b);
-                
-                be.item = path
-                //env.active = CreateElementNode(path)
-            }else if(args.length == 2){
-                    
-                let ae = args[0]?.elementValue
-                let be = args[1]?.elementValue
-                if(!ae || !be){
-                    throw new Error("invalid runtime node")
-                }
-                if(ae.type != RuntimeElementType.Path || be.type != RuntimeElementType.Path){
-                    throw new Error("Cannot perform boolean on group (yet)");
-                }
-                let a = ae.item as paper.Path
-                let b = be.item as paper.Path
-                let path = a.unite(b);
-                //new path item, now replace a.
-                //env.peek().elementValue.item = path;
-                env.active = CreateElementNode(path)
-            }else{
-                //if we only have one argument, it could modify the prior object, while two will pop both, subtract them, set active.
-                throw new Error("Unite popop must pop 1 (.unite, modifies top) or 2 (..unite, creates new) stack arguments")
-            }
+            doBooleanOp("unite",args,env);
             // a pop operator also pushes back to the stack.
         break;
         case "divide":
-            if(args.length == 1){                    
-                let ae = args[0]?.elementValue
-                let be = env.peek().elementValue
-                if(!ae || !be){
-                    throw new Error("invalid runtime node")
-                }
-                if(ae.type != RuntimeElementType.Path || be.type != RuntimeElementType.Path){
-                    throw new Error("Cannot perform boolean on group (yet)");
-                }
-                let a = ae.item as paper.PathItem
-                let b = be.item as paper.PathItem
-                let path = b.divide(a);
-                
-                be.item = path
-                //env.active = CreateElementNode(path)
-            }else if(args.length == 2){
-                    
-                let ae = args[0]?.elementValue
-                let be = args[1]?.elementValue
-                if(!ae || !be){
-                    throw new Error("invalid runtime node")
-                }
-                if(ae.type != RuntimeElementType.Path || be.type != RuntimeElementType.Path){
-                    throw new Error("Cannot perform boolean on group (yet)");
-                }
-                let a = ae.item as paper.Path
-                let b = be.item as paper.Path
-                let path = b.divide(a);
-                //new path item, now replace a.
-                //env.peek().elementValue.item = path;
-                env.active = CreateElementNode(path)
-            }else{
-                //if we only have one argument, it could modify the prior object, while two will pop both, subtract them, set active.
-                throw new Error("Divide popop must pop 1 (.divide, modifies top) or 2 (..divide, creates new) stack arguments")
-            }
+            doBooleanOp("divide",args,env);
+            break;
             // a pop operator also pushes back to the stack.
         break;
         case "append":
@@ -715,6 +543,84 @@ function compilePopStatement(node: treeNode ,args: RuntimeNode[], env: Environme
         break;
         default:
             throw new Error("Unknown Pop Statement "+node.id)
+    }
+}
+
+function doBooleanOp(op: string, args: RuntimeNode[], env: Environment){
+    let path: paper.PathItem
+    if(args.length == 1){                    
+        let ae = args[0]?.elementValue
+        let be = env.peek().elementValue
+        if(!ae || !be){
+            throw new Error("invalid runtime node")
+        }
+        if(ae.type != RuntimeElementType.Path || be.type != RuntimeElementType.Path){
+            throw new Error("Cannot perform boolean on group (yet)");
+        }
+        let a = ae.item as paper.PathItem
+        let b = be.item as paper.PathItem
+        
+        switch(op){
+            case "intersect":
+                path = a.intersect(b);
+            break;
+            case "subtract":
+                path = b.subtract(a);
+            break;
+            case "divide":
+                path = b.divide(a);
+                break;
+            case "unite":
+                path = a.unite(b);
+                break;
+            case "exclude":
+                path = a.exclude(b);
+                break;
+            default:
+                throw new Error("unsupported pop operation "+op);
+        }
+        
+        be.item = path
+        //env.active = CreateElementNode(path)
+    }else if(args.length == 2){
+            
+        let ae = args[0]?.elementValue
+        let be = args[1]?.elementValue
+        if(!ae || !be){
+            throw new Error("invalid runtime node")
+        }
+        if(ae.type != RuntimeElementType.Path || be.type != RuntimeElementType.Path){
+            throw new Error("Cannot perform boolean on group (yet)");
+        }
+        let a = ae.item as paper.Path
+        let b = be.item as paper.Path
+        
+        switch(op){
+            case "intersect":
+                path = a.intersect(b);
+            break;
+            case "subtract":
+                path = b.subtract(a);
+            break;
+            case "divide":
+                path = b.divide(a);
+                break;
+            case "unite":
+                path = a.unite(b);
+                break;
+            case "exclude":
+                path = a.exclude(b);
+                break;
+            default:
+                throw new Error("unsupported pop operation "+op);
+        }
+
+        //new path item, now replace a.
+        //env.peek().elementValue.item = path;
+        env.active = CreateElementNode(path)
+    }else{
+        //if we only have one argument, it could modify the prior object, while two will pop both, subtract them, set active.
+        throw new Error(op+" boolean popop must pop 1 (."+op+", modifies top) or 2 (.."+op+", creates new) stack arguments")
     }
 }
 
