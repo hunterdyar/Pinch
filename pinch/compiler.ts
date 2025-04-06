@@ -1,5 +1,6 @@
+
 import { Environment } from "./environment";
-import { NodeType, treeNode, RuntimeNode, CreateElementNode,CreateGroupNode, CreateNumberNode, RuntimeType } from "./ast";
+import { NodeType, treeNode, RuntimeNode, RuntimeElementType, CreateElementNode,CreateGroupNode, CreateNumberNode, RuntimeType } from "./ast";
 import paper from "paper";
 
 function compileAndRun(canvas: HTMLCanvasElement, root: treeNode){
@@ -24,11 +25,11 @@ function compileAndRun(canvas: HTMLCanvasElement, root: treeNode){
         compile(child, environment);
     });
     performance.mark("compile-end")
-    if(environment.stack.length != 1){
-        throw new Error("The stack is "+environment.stack.length+". It should end at 1 (root svg)");
-    }
-    environment.stack.pop();
-    environment.root.elementValue?.Render();
+
+    environment.stack.forEach((rt:RuntimeNode)=>{
+        console.log("render stack", rt);
+        rt.elementValue?.Render();
+    });
 
     return
 }
@@ -57,12 +58,13 @@ function compile(node:treeNode, env: Environment){
             compileStandaloneObjectStatement(node,env) 
             //append! let empty object statements be equivalent to append.
             //todo: i want to move that logic to the lexer.
-            if(env.active != null){
-                c = env.peek();
-                if(c != null){
-                    c.appendChildElement(env.active)
-                }
-            }   
+            // if(env.active != null){
+            //     c = env.peek();
+            //     if(c != null){
+            //         //todo: we should push 
+            //         c.appendChildElement(env.active)
+            //     }
+            // }   
             break;
         case NodeType.Transformation:
             let ctx = env.peek();
@@ -88,6 +90,7 @@ function compile(node:treeNode, env: Environment){
                 }else if (c.type == RuntimeType.Element){
                     compile(node.children[0],env);
                     c.appendChildElement(env.active);
+                    console.log(env.active)
                 }
             }else{
                 throw new Error("Cannot Append Nothing")
@@ -120,7 +123,23 @@ function compile(node:treeNode, env: Environment){
                 }
             }
             //else
-            env.pop();
+            //normal pop with no command next to it.
+            if(node.children.length == 1){
+                //pop the number of dots.
+                for(let pops = 0;pops<node.children[0];pops++){
+                    env.pop();
+                }
+            }else if(node.children.length == 2){
+
+                let poppedChilds = []
+                //pop the number of dots and shove em into a list for us to use...
+                for(let pops = 0;pops<node.children[0];pops++){
+                    poppedChilds.push(env.pop());
+                }
+                compilePopStatement(node.children[1],poppedChilds,env);
+            }else{
+                throw new Error("Parsing error? bad number children for pop statement.")
+            }
             break;
         case NodeType.Flow:
             compileFlowStatement(node,env);
@@ -380,8 +399,8 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
             if(node.children.length == 1){
                 let content = compile(node.children[0],env)
                 let textitem = new paper.PointText(paper.view.center);
-                // textitem.content = content;
-                // env.active = CreateElementNode(textitem);
+               // textitem.content = content;
+                //env.active = CreateElementNode(textitem);
 
             }else if(node.children.length == 3){
                 let x = parseFloat(compile(node.children[0],env))
@@ -389,8 +408,8 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
                 let content = compile(node.children[2],env)
                 let a = new paper.Point(x,y)
                 let textitem = new paper.PointText(a);
-                // textitem.content = content;
-                // env.active = CreateElementNode(textitem);
+              //  textitem.content = content;
+                //env.active = CreateElementNode(textitem);
             }
             else{
                 throw new Error("Text: bad number of arguments. Want 1 (text) or 3 (x y text)")
@@ -403,20 +422,6 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
             }
         }
     //
-}
-
-function tryRunDefinitionLookup(id: string, env:Environment):boolean{
-    if(env.hasDefinition(id)){
-        //push?
-
-        let body = env.getDefinition(id)
-        body.forEach(x=>{
-            compile(x,env);
-        });
-
-        return true
-    }
-    return false
 }
 
 function compileTransformation(node:treeNode, env: Environment){
@@ -499,6 +504,138 @@ function compileTransformation(node:treeNode, env: Environment){
         default:
             throw new Error("Unknown Transformation "+node.id);
     }
+}
+
+function compilePopStatement(node: treeNode ,args: RuntimeNode[], env: Environment){
+    console.log("pop statement",node.id, args)
+    switch(node.id){
+        case "subtract":
+            doBooleanOp("subtract",args,env);
+        break;
+        case "intersect":
+            doBooleanOp("intersect",args,env);
+        break;
+        case "exclude":
+            doBooleanOp("exclude",args,env);
+        break;
+        case "unite":
+            doBooleanOp("unite",args,env);
+            // a pop operator also pushes back to the stack.
+        break;
+        case "divide":
+            doBooleanOp("divide",args,env);
+            break;
+            // a pop operator also pushes back to the stack.
+        break;
+        case "append":
+            if(args.length != 1){
+                throw new Error("Append popop must have 2 elements e.g:(.append)")
+            }
+            let appe = args[0]
+            if(!appe){
+                throw new Error("invalid runtime node")
+            }
+            
+            //new path item, now replace a.
+            //env.peek().elementValue.item = path;
+            env.peek().appendChildElement(appe)
+            // a pop operator also pushes back to the stack.
+        break;
+        default:
+            throw new Error("Unknown Pop Statement "+node.id)
+    }
+}
+
+function doBooleanOp(op: string, args: RuntimeNode[], env: Environment){
+    let path: paper.PathItem
+    if(args.length == 1){                    
+        let ae = args[0]?.elementValue
+        let be = env.peek().elementValue
+        if(!ae || !be){
+            throw new Error("invalid runtime node")
+        }
+        if(ae.type != RuntimeElementType.Path || be.type != RuntimeElementType.Path){
+            throw new Error("Cannot perform boolean on group (yet)");
+        }
+        let a = ae.item as paper.PathItem
+        let b = be.item as paper.PathItem
+        
+        switch(op){
+            case "intersect":
+                path = a.intersect(b);
+            break;
+            case "subtract":
+                path = b.subtract(a);
+            break;
+            case "divide":
+                path = b.divide(a);
+                break;
+            case "unite":
+                path = a.unite(b);
+                break;
+            case "exclude":
+                path = a.exclude(b);
+                break;
+            default:
+                throw new Error("unsupported pop operation "+op);
+        }
+        
+        be.item = path
+        //env.active = CreateElementNode(path)
+    }else if(args.length == 2){
+            
+        let ae = args[0]?.elementValue
+        let be = args[1]?.elementValue
+        if(!ae || !be){
+            throw new Error("invalid runtime node")
+        }
+        if(ae.type != RuntimeElementType.Path || be.type != RuntimeElementType.Path){
+            throw new Error("Cannot perform boolean on group (yet)");
+        }
+        let a = ae.item as paper.Path
+        let b = be.item as paper.Path
+        
+        switch(op){
+            case "intersect":
+                path = a.intersect(b);
+            break;
+            case "subtract":
+                path = b.subtract(a);
+            break;
+            case "divide":
+                path = b.divide(a);
+                break;
+            case "unite":
+                path = a.unite(b);
+                break;
+            case "exclude":
+                path = a.exclude(b);
+                break;
+            default:
+                throw new Error("unsupported pop operation "+op);
+        }
+
+        //new path item, now replace a.
+        //env.peek().elementValue.item = path;
+        env.active = CreateElementNode(path)
+    }else{
+        //if we only have one argument, it could modify the prior object, while two will pop both, subtract them, set active.
+        throw new Error(op+" boolean popop must pop 1 (."+op+", modifies top) or 2 (.."+op+", creates new) stack arguments")
+    }
+}
+
+function tryRunDefinitionLookup(id: string, env:Environment):boolean{
+    if(env.hasDefinition(id)){
+        //push?
+
+        let body = env.getDefinition(id)
+        body.forEach(x=>{
+            compile(x,env);
+        });
+
+        return true
+    }
+    return false
 }
 
 function checkChildrenLengthForArgument(node: treeNode, length: number){
