@@ -1,7 +1,5 @@
 import paper from "paper";
 
-import { collapseTextChangeRangesAcrossMultipleVersions } from "typescript"
-
 enum NodeType {
     Program,
     ObjectStatement,
@@ -195,6 +193,10 @@ abstract class RuntimeElement {
 
 class RuntimeItem extends RuntimeElement{
     item: paper.PathItem
+
+    override AddChild(element: RuntimeElement){
+        throw new Error("addChild is not implemented by runtimeItem.");
+    }
 
     constructor(shape: paper.Path | paper.PathItem){
         super()
