@@ -1,6 +1,6 @@
 
 import { Environment } from "./environment";
-import { NodeType, treeNode, RuntimeNode, RuntimeElementType, CreateElementNode,CreateGroupNode, CreateNumberNode, RuntimeType } from "./ast";
+import { NodeType, treeNode, RuntimeNode, RuntimeElementType, CreateElementNode,CreateGroupNode, CreateNumberNode,CreateStringNode,RuntimeType } from "./ast";
 import paper from "paper";
 
 function compileAndRun(canvas: HTMLCanvasElement, root: treeNode){
@@ -27,7 +27,6 @@ function compileAndRun(canvas: HTMLCanvasElement, root: treeNode){
     performance.mark("compile-end")
 
     environment.stack.forEach((rt:RuntimeNode)=>{
-        console.log("render stack", rt);
         rt.elementValue?.Render();
     });
 
@@ -90,7 +89,6 @@ function compile(node:treeNode, env: Environment){
                 }else if (c.type == RuntimeType.Element){
                     compile(node.children[0],env);
                     c.appendChildElement(env.active);
-                    console.log(env.active)
                 }
             }else{
                 throw new Error("Cannot Append Nothing")
@@ -286,8 +284,19 @@ function compileFlowStatement(node: treeNode, env: Environment){
             
             //todo: we can do this with fewer lookups if we pass the procedure into compile instead of onto the stack.
             let name = call.children[0].id
+            let argDefs = [];
+            for(let a = 1;a<call.children.length;a++){
+                if(call.children[a].type == NodeType.Label){
+                    argDefs.push(call.children[a].id);
+                }
+            }
+            const setDefs = new Set(argDefs);
 
-            env.addAndPushDefinition(name,def)
+            if(argDefs.length !== setDefs.size){
+                throw new Error("Procedure @arguments must all have unique names.")
+            }
+   
+            env.addAndPushDefinition(name,def,argDefs)
             body.forEach(s=>{
                 compile(s,env)
             })
@@ -417,7 +426,7 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
             break
         default:
             //def lookup!            
-            if(!tryRunDefinitionLookup(node.id,env)){
+            if(!tryRunDefinitionLookup(node,env)){
                 console.log("Warning. Unknown standalone object statement "+node.id)
             }
         }
@@ -507,7 +516,6 @@ function compileTransformation(node:treeNode, env: Environment){
 }
 
 function compilePopStatement(node: treeNode ,args: RuntimeNode[], env: Environment){
-    console.log("pop statement",node.id, args)
     switch(node.id){
         case "subtract":
             doBooleanOp("subtract",args,env);
@@ -624,14 +632,26 @@ function doBooleanOp(op: string, args: RuntimeNode[], env: Environment){
     }
 }
 
-function tryRunDefinitionLookup(id: string, env:Environment):boolean{
+function tryRunDefinitionLookup(node: treeNode, env:Environment):boolean{
+    const id = node.id;
     if(env.hasDefinition(id)){
-        //push?
+        let proc = env.getDefinition(id)
 
-        let body = env.getDefinition(id)
-        body.forEach(x=>{
+        env.pushFrame();
+        //set local variables
+        for(let i = 0;i<proc.argNames.length;i++){
+            let id = proc.argNames[i];
+            if(id){
+                env.setLocal(id, CreateStringNode(compile(node.children[i],env)))
+            }
+        }
+        RuntimeNode
+        //run body
+        proc.statements.forEach(x=>{
             compile(x,env);
         });
+
+        env.popFrame();
 
         return true
     }

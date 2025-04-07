@@ -113,16 +113,24 @@ function CreateNumberNode(number: Number){
     r.numValue = number;
     return r;
 }
+function CreateStringNode(s: string){
+    var r = new RuntimeNode();
+    r.type = RuntimeType.String;
+    r.stringValue = s;
+    return r;
+}
 
 class Procedure{
     type: NodeType = NodeType.Procedure
     id: string
+    argNames: string[]
     statements: treeNode[] = []
     internalPushCount: number = 0
 
-    constructor(id: string, statements: treeNode[]){
+    constructor(id: string, args: string[], statements: treeNode[]){
         this.id = id
         this.statements = statements
+        this.argNames = args
     }
 
     pushStatement(node: treeNode){
@@ -247,4 +255,4 @@ class RuntimeGroup extends RuntimeElement {
     }
 }
 
-export {NodeType, treeNode, Procedure, RuntimeNode, RuntimeType, RuntimeItem, RuntimeGroup, RuntimeElement, RuntimeElementType, CreateElementNode, CreateGroupNode, CreateProcedureNode, CreateNumberNode}
+export {NodeType, treeNode, Procedure, RuntimeNode, RuntimeType, RuntimeItem, RuntimeGroup, RuntimeElement, RuntimeElementType, CreateElementNode, CreateGroupNode, CreateProcedureNode, CreateNumberNode, CreateStringNode}

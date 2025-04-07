@@ -55,23 +55,23 @@ class Environment  {
             throw new Error("cannot peek")
         }
     }
-    addAndPushDefinition(identifier: string, body: treeNode[]){
+    addAndPushDefinition(identifier: string, body: treeNode[], args: string[]){
         if(identifier in this.definitions){
             throw new Error("Can't define "+identifier+" . It is already defined.");
         }
 
         //todo: two wrapper functions basically...
-        this.definitions[identifier] = new Procedure(identifier, body);
+        this.definitions[identifier] = new Procedure(identifier, args, body);
         this.push(CreateProcedureNode(this.definitions[identifier]))
     }
     hasDefinition(identifier: string):boolean{
         return identifier in this.definitions
     }
-    getDefinition(identifier: string):treeNode[]
+    getDefinition(identifier: string):Procedure
     {
         let x = this.definitions[identifier]
         if(x != undefined){
-            return x.statements;
+            return x;
         }else{
             throw new Error("Invlid definition lookup. "+identifier)
         }
