@@ -45,7 +45,7 @@ class RuntimeNode {
     elementValue: RuntimeElement | undefined //rename to item
     procudureValue: Procedure | undefined
     stringValue: string = ""
-    numValue: Number = 0
+    numValue: number = 0
 
     getValue(): RuntimeElement | Procedure | string | Number | RuntimeGroup | undefined {
         switch (this.type){
@@ -60,7 +60,14 @@ class RuntimeNode {
             case RuntimeType.String: return this.stringValue;
             case RuntimeType.Number: return this.numValue.toString();
             default:
-                throw new Error("Can't get string value for runtime node of type "+this.type)
+                throw new Error("Can't get string value for runtime node of type "+NodeType[this.type])
+        }
+    }
+    getNumberValue(): number{
+        switch(this.type){
+            case RuntimeType.Number: return this.numValue
+            default:
+                throw new Error("Can't get number value for runtime node of type "+NodeType[this.type])
         }
     }
     
@@ -107,7 +114,7 @@ function CreateProcedureNode(procedure: Procedure){
     r.procudureValue = procedure;
     return r;
 }
-function CreateNumberNode(number: Number){
+function CreateNumberNode(number: number){
     var r = new RuntimeNode();
     r.type = RuntimeType.Number;
     r.numValue = number;

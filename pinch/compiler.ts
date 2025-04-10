@@ -37,22 +37,23 @@ function GetSVGFromCurrentPaperContext(){
     return paper.project.exportSVG();
 }
 
-function compile(node:treeNode, env: Environment){
+function compile(node:treeNode, env: Environment): RuntimeNode{
     if(!node){
         throw new Error("Can't compile nothing!")
     }
     let c: RuntimeNode
     switch(node.type){
         case NodeType.Number:
-            return node.id
+            return CreateNumberNode(parseFloat(node.id));
         case NodeType.String:
-            return node.id
+            return CreateStringNode(node.id);
         case NodeType.Identifier:
             let local = env.getLocalOrNull(node.id);
             if(local){
-                return local.getStringValue()
+                return local
             }
-            return node.id
+            console.log("unable to get local for "+node.id+". treating as string instead.");
+            return CreateStringNode(node.id)
         case NodeType.ObjectStatement:
             compileStandaloneObjectStatement(node,env) 
             //append! let empty object statements be equivalent to append.
@@ -105,7 +106,6 @@ function compile(node:treeNode, env: Environment){
             //else
             compile(node.children[0], env)
             env.push(env.active); 
-
             break;
         case NodeType.Pop:
             c = env.peek();
@@ -154,11 +154,11 @@ function compile(node:treeNode, env: Environment){
             let expression = "'use strict';\n"+env.printJSFrame()+"\n"+node.id
             return eval?.(expression) 
             break;
+        
         default: 
-            console.log("unhandled:",node)
-            break;
+            throw new Error("unable to compile node: '"+node.id+"'. node is type "+NodeType[node.type])
+        break;
     }
-    return node.id;
 }
 
 function compileFlowStatement(node: treeNode, env: Environment){
@@ -182,15 +182,14 @@ function compileFlowStatement(node: treeNode, env: Environment){
             let step = 1;
             l = l - argi;
             if(l == 1){
-                //should this be int?
-                end = parseInt(compile(call.children[argi],env));
+                end = compile(call.children[argi],env).getNumberValue();
             } else if(l == 2){
-                start = parseInt(compile(call.children[argi+0],env));
-                end = parseInt(compile(call.children[argi+1],env));
+                start = compile(call.children[argi+0],env).getNumberValue();
+                end = compile(call.children[argi+1],env).getNumberValue();
             }else if(l == 3){
-                start = parseInt(compile(call.children[argi+0],env));
-                end = parseInt(compile(call.children[argi+1],env));
-                step = parseInt(compile(call.children[argi+2], env))
+                start = compile(call.children[argi+0],env).getNumberValue();
+                end = compile(call.children[argi+1],env).getNumberValue();
+                step = compile(call.children[argi+2], env).getNumberValue();
             }else{
                 throw new Error("repeat: wrong number arguments. got too many.")
             }
@@ -221,7 +220,7 @@ function compileFlowStatement(node: treeNode, env: Environment){
             if(ifzl != 1){
                 throw new Error("ifz: wrong number arguments. need 1")
             }
-            let test = parseInt(compile(call.children[0],env));
+            let test = compile(call.children[0],env).getNumberValue();
             if(test == 0){
                 env.pushFrame()
                 body.forEach(s=>{
@@ -237,7 +236,7 @@ function compileFlowStatement(node: treeNode, env: Environment){
             if(ifnzl != 1){
                 throw new Error("ifz: wrong number arguments. need 1")
             }
-            let testnz = parseInt(compile(call.children[0],env));
+            let testnz = compile(call.children[0],env).getNumberValue();
             if(testnz != 0){
                 env.pushFrame()
                 body.forEach(s=>{
@@ -253,7 +252,7 @@ function compileFlowStatement(node: treeNode, env: Environment){
             if(ifposl != 1){
                 throw new Error("ifz: wrong number arguments. need 1")
             }
-            let testpos = parseInt(compile(call.children[0],env));
+            let testpos = compile(call.children[0],env).getNumberValue();
             if(testpos >= 0){
                 env.pushFrame()
                 body.forEach(s=>{
@@ -269,7 +268,7 @@ function compileFlowStatement(node: treeNode, env: Environment){
             if(ifnegl != 1){
                 throw new Error("ifz: wrong number arguments. need 1")
             }
-            let testneg = parseInt(compile(call.children[0],env));
+            let testneg = compile(call.children[0],env).getNumberValue();
             if(testneg < 0){
                 env.pushFrame()
                 body.forEach(s=>{
@@ -322,13 +321,13 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
             //var sig = getSignature(node.children.length,"circle");
             let sig = {}
             if(node.children.length == 1){
-                let r = parseFloat(compile(node.children[0],env))
+                let r = compile(node.children[0],env).getNumberValue()
                 path = new paper.Path.Circle(paper.view.center,r);
 
             }else if(node.children.length == 3){
-                let x = parseFloat(compile(node.children[0],env))
-                let y = parseFloat(compile(node.children[1],env))
-                let r = parseFloat(compile(node.children[2],env))
+                let x = compile(node.children[0],env).getNumberValue()
+                let y = compile(node.children[1],env).getNumberValue()
+                let r = compile(node.children[2],env).getNumberValue()
                 path = new paper.Path.Circle(new paper.Point(x,y),r);
             }else{
                 throw new Error("Circle: bad number of arguments. Want 1 (r) or 3 (x y r)")
@@ -344,23 +343,23 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
         case "rect":
 
         if(node.children.length == 1){
-            let size = parseFloat(compile(node.children[0],env))
+            let size = compile(node.children[0],env).getNumberValue()
             let tr = new paper.Point(paper.view.center.x-size/2,paper.view.center.y+size/2)
             let s = new paper.Size(size,size)
             path = new paper.Path.Rectangle(tr,s);
             
         }else if(node.children.length == 2){
-            let width = parseFloat(compile(node.children[0],env))
-            let height = parseFloat(compile(node.children[1],env))
+            let width = compile(node.children[0],env).getNumberValue()
+            let height = compile(node.children[1],env).getNumberValue()
             let tr = new paper.Point(paper.view.center.x-width/2,paper.view.center.y+height/2)
             let bl = new paper.Point(paper.view.center.x+width/2,paper.view.center.y-height/2)
             path = new paper.Path.Rectangle(tr,bl);
 
         }else if(node.children.length == 4){
-            let x = parseFloat(compile(node.children[0],env))
-            let y = parseFloat(compile(node.children[1],env))
-            let w = parseFloat(compile(node.children[2],env))
-            let h = parseFloat(compile(node.children[3],env))
+            let x = compile(node.children[0],env).getNumberValue()
+            let y = compile(node.children[1],env).getNumberValue()
+            let w = compile(node.children[2],env).getNumberValue()
+            let h = compile(node.children[3],env).getNumberValue()
             let pos = new paper.Point(x,y)
             let s = new paper.Size(w,h)
             path = new paper.Path.Rectangle(pos,s);
@@ -374,10 +373,10 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
             break;
         case "line":
             if(node.children.length == 4){
-                let x1 = parseFloat(compile(node.children[0],env))
-                let y1 = parseFloat(compile(node.children[1],env))
-                let x2 = parseFloat(compile(node.children[2],env))
-                let y2 = parseFloat(compile(node.children[3],env))
+                let x1 = compile(node.children[0],env).getNumberValue()
+                let y1 = compile(node.children[1],env).getNumberValue()
+                let x2 = compile(node.children[2],env).getNumberValue()
+                let y2 = compile(node.children[3],env).getNumberValue()
                 let a = new paper.Point(x1,y1)
                 let b = new paper.Point(x2,y2)
                 path = new paper.Path.Line(a,b);
@@ -388,14 +387,14 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
         break;
         case "polygon":
             if(node.children.length == 2){
-                let sides = parseFloat(compile(node.children[0],env))
-                let radius = parseFloat(compile(node.children[1],env))
+                let sides = compile(node.children[0],env).getNumberValue()
+                let radius = compile(node.children[1],env).getNumberValue()
                 path = new paper.Path.RegularPolygon(paper.view.center,sides,radius);
             }else if(node.children.length == 4){
-                let x = parseFloat(compile(node.children[0],env))
-                let y = parseFloat(compile(node.children[1],env))
-                let sides = parseFloat(compile(node.children[2],env))
-                let radius = parseFloat(compile(node.children[3],env))
+                let x = compile(node.children[0],env).getNumberValue()
+                let y = compile(node.children[1],env).getNumberValue()
+                let sides = compile(node.children[2],env).getNumberValue()
+                let radius = compile(node.children[3],env).getNumberValue()
                 let a = new paper.Point(x,y)
                 path = new paper.Path.RegularPolygon(a,sides,radius);
             }
@@ -412,8 +411,8 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
                 //env.active = CreateElementNode(textitem);
 
             }else if(node.children.length == 3){
-                let x = parseFloat(compile(node.children[0],env))
-                let y = parseFloat(compile(node.children[1],env))
+                let x = compile(node.children[0],env).getNumberValue()
+                let y = compile(node.children[1],env).getNumberValue()
                 let content = compile(node.children[2],env)
                 let a = new paper.Point(x,y)
                 let textitem = new paper.PointText(a);
@@ -445,7 +444,7 @@ function compileTransformation(node:treeNode, env: Environment){
     switch(node.id){
         case "fill":
             checkChildrenLengthForArgument(node,1)
-            context.style["fillColor"] = new paper.Color(compile(node.children[0],env))
+            context.style["fillColor"] = new paper.Color(compile(node.children[0],env).getStringValue())
             break
         // case "radius":
         // case "r":
@@ -458,53 +457,53 @@ function compileTransformation(node:treeNode, env: Environment){
         //     break;
         case "x":
             checkChildrenLengthForArgument(node,1)
-            context.item.position.x = parseFloat(compile(node.children[0],env))
+            context.item.position.x = compile(node.children[0],env).getNumberValue();
             break;
         case "y":
             checkChildrenLengthForArgument(node,1)
-            context.item.position.y = parseFloat(compile(node.children[0],env))
+            context.item.position.y = compile(node.children[0],env).getNumberValue()
             break;
         case "dx":
             checkChildrenLengthForArgument(node,1)
-            context.item.position.x = context.item.position.x+parseFloat(compile(node.children[0],env))
+            context.item.position.x = context.item.position.x+compile(node.children[0],env).getNumberValue()
             break;
         case "dy":
             checkChildrenLengthForArgument(node,1)
-            context.item.position.y = context.item.position.y+parseFloat(compile(node.children[0],env))
+            context.item.position.y = context.item.position.y+compile(node.children[0],env).getNumberValue()
             break;
         case "width":
             checkChildrenLengthForArgument(node,1)
-            context.item.bounds.width = parseFloat(compile(node.children[0],env))
+            context.item.bounds.width = compile(node.children[0],env).getNumberValue()
             break
         case "height":
             checkChildrenLengthForArgument(node,1)
-            context.item.bounds.height = parseFloat(compile(node.children[0],env))
+            context.item.bounds.height = compile(node.children[0],env).getNumberValue()
             break
         case "stroke-width":
         case "sw":
             checkChildrenLengthForArgument(node,1)
-            context.style["strokeWidth"] = parseFloat(compile(node.children[0],env))
+            context.style["strokeWidth"] = compile(node.children[0],env).getNumberValue()
             break;
         case "stroke":
         case "stroke-color":
         case "sc":
             checkChildrenLengthForArgument(node,1)
-            context.style["strokeColor"] = new paper.Color(compile(node.children[0],env))
+            context.style["strokeColor"] = new paper.Color(compile(node.children[0],env).getStringValue())
             break;
         case "blendmode":
         case "bm":
             checkChildrenLengthForArgument(node,1)
-            context.SetBlendMode(compile(node.children[0],env))
+            context.SetBlendMode(compile(node.children[0],env).getStringValue())
             break;
         case "opacity":
             checkChildrenLengthForArgument(node,1)
-            let opacity = parseFloat(compile(node.children[0],env))
+            let opacity = compile(node.children[0],env).getNumberValue()
             //todo: validity check?
             context.opacity = opacity
             break
         case "transparency":
             checkChildrenLengthForArgument(node,1)
-            let transparency = parseFloat(compile(node.children[0],env))
+            let transparency = compile(node.children[0],env).getNumberValue()
             //todo: validity check?
             //clamp 01.
             transparency = Math.max(0,Math.min(1,transparency))
@@ -642,7 +641,7 @@ function tryRunDefinitionLookup(node: treeNode, env:Environment):boolean{
         for(let i = 0;i<proc.argNames.length;i++){
             let id = proc.argNames[i];
             if(id){
-                env.setLocal(id, CreateStringNode(compile(node.children[i],env)))
+                env.setLocal(id, compile(node.children[i],env))
             }
         }
         RuntimeNode
