@@ -53,8 +53,9 @@ function compile(node:treeNode, env: Environment): RuntimeNode{
             if(local){
                 return local
             }
-            console.log("unable to get local for "+node.id+". treating as string instead.");
-            return CreateStringNode(node.id)
+            throw new PEvalError("UnknownID","Unknown symbol '"+node.id+"'.",node)
+            //console.log("unable to get local for "+node.id+". treating as string instead.");
+            //return CreateStringNode(node.id)
         case NodeType.ObjectStatement:
             compileStandaloneObjectStatement(node,env) 
             //append! let empty object statements be equivalent to append.
@@ -445,7 +446,7 @@ function compileTransformation(node:treeNode, env: Environment){
     switch(node.id){
         case "fill":
             checkChildrenLengthForArgument(node,1)
-            context.style["fillColor"] = new paper.Color(compile(node.children[0],env).getStringValue())
+            context.style["fillColor"] = compileColorFromSingleNode(node.children[0],env)
             break
         // case "radius":
         // case "r":
@@ -494,7 +495,7 @@ function compileTransformation(node:treeNode, env: Environment){
         case "blendmode":
         case "bm":
             checkChildrenLengthForArgument(node,1)
-            context.SetBlendMode(compile(node.children[0],env).getStringValue(), node.children[0])
+            context.SetBlendMode(compileBlendmodeFromSingleNode(node.children[0], env), node.children[0])
             break;
         case "opacity":
             checkChildrenLengthForArgument(node,1)
@@ -657,6 +658,55 @@ function tryRunDefinitionLookup(node: treeNode, env:Environment):boolean{
     }
     return false
 }
+
+function compileColorFromSingleNode(node:treeNode, env:Environment):paper.Color{
+    if(node.id == "")
+    {
+        throw new PEvalError("BadID","Can't get color, bad input",node)
+    }
+
+    if(node.type == NodeType.String){
+        return new paper.Color(node.id)
+    }
+
+    if(node.type == NodeType.Identifier){
+        let local = env.getLocalOrNull(node.id);
+        if(local){
+        return new paper.Color(local.getStringValue())
+        }
+        var s = node.id
+        return new paper.Color(s);
+    }
+
+    throw new PEvalError("BadType","Can't get color from node "+node.id,node)   
+}
+
+const validBlendModes = ['normal', 'multiply', 'screen', 'overlay', 'soft-light', 'hard-light', 'color-dodge', 'color-burn', 'darken', 'lighten', 'difference', 'exclusion', 'hue', 'saturation', 'luminosity', 'color', 'add', 'subtract', 'average', 'pin-light', 'negation', 'source-over', 'source-in', 'source-out', 'source-atop', 'destination-over', 'destination-in', 'destination-out', 'destination-atop', 'lighter', 'darker', 'copy', 'xor']
+function compileBlendmodeFromSingleNode(node:treeNode, env:Environment):string{
+    let s: string = node.id
+    if(node.id == "")
+    {
+        throw new PEvalError("BadID","Can't get , bad input",node)
+    }
+
+    if(node.type == NodeType.Identifier){
+        console.log("is identifier a node?")
+        let local = env.getLocalOrNull(node.id);
+        if(local){
+            s = local.getStringValue() 
+        }
+    }
+    // else if(node.type == NodeType.String){
+    //    s = node.id
+    // }
+
+    if(validBlendModes.includes(s.toLowerCase())){
+       return s
+     }
+    
+    throw new PEvalError("BadType",s +" is not a valid blendmode.", node)   
+}
+
 
 function checkChildrenLengthForArgument(node: treeNode, length: number){
     if(node.children.length != 1){
