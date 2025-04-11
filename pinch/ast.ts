@@ -1,4 +1,6 @@
+import type { Interval } from "ohm-js";
 import paper from "paper";
+import { PEvalError } from "./pinchError";
 
 enum NodeType {
     Program,
@@ -22,11 +24,13 @@ class treeNode {
     type: NodeType
     id: string
     children: any[]
-    constructor(ns: NodeType, id: string,childs: any[])
+    sourceInterval: Interval 
+    constructor(ns: NodeType, id: string,childs: any[], interval: Interval)
     {
         this.type = ns
         this.id = id
         this.children = childs
+        this.sourceInterval = interval
         //this.children = childs.filter(x=>x!=null && x != undefined)
     }
 }
@@ -71,27 +75,27 @@ class RuntimeNode {
         }
     }
     
-    appendChildElement(element: RuntimeNode | null){
+    appendChildElement(element: RuntimeNode | null, node:treeNode){
         if(element == null){
-            throw new Error("can't append child element that is null!")
+            throw new PEvalError("AppendError","can't append child element that is null!", node)
         }
         if(element.type != RuntimeType.Element){
-            throw new Error("Can't append child element, is not element.");//todo append groups into groups?
+            throw new PEvalError("AppendError","Can't append child element, is not element.",node);//todo append groups into groups?
         }else if(this.type == RuntimeType.Element){
             if(this.elementValue){
                 if(element.elementValue){
                         this.elementValue.AddChild(element.elementValue)
                  }else{
-                    throw new Error("element value of appendee is null but element is marked as element.")
+                    throw new PEvalError("AppendError","element value of appendee is null but element is marked as element.",node)
                  }
             }else{
-                throw new Error("element value is of this null but element is marked as element.")
+                throw new PEvalError("AppendError","element value is of this null but element is marked as element.",node)
             }
         }
         else if(this.type == RuntimeType.Procedure){
-            throw new Error("Can't append child element to procedure. we meant to do a different thing.")
+            throw new PEvalError("AppendError","Can't append child element to procedure. we meant to do a different thing.",node)
         }else{
-            throw new Error("call to append on invalid runtime item.")
+            throw new PEvalError("AppendError","call to append on invalid runtime item.",node)
         }
     }
 }
@@ -195,13 +199,13 @@ abstract class RuntimeElement {
     AddChild(element: RuntimeElement){
         throw new Error("addChild is not implemented.");
     }
-    SetBlendMode(bm: string){
+    SetBlendMode(bm: string, node: treeNode){
         bm = bm.toLowerCase().trim()
         const valid = ['normal', 'multiply', 'screen', 'overlay', 'soft-light', 'hard-light', 'color-dodge', 'color-burn', 'darken', 'lighten', 'difference', 'exclusion', 'hue', 'saturation', 'luminosity', 'color', 'add', 'subtract', 'average', 'pin-light', 'negation', 'source-over', 'source-in', 'source-out', 'source-atop', 'destination-over', 'destination-in', 'destination-out', 'destination-atop', 'lighter', 'darker', 'copy', 'xor']   
         if(valid.includes(bm)){
             this.blendMode = bm;
         }else{
-            throw new Error(bm+" is not a valid blend mode.");
+            throw new PEvalError("BadID",bm+" is not a valid blend mode.", node);
         }
     }
 }

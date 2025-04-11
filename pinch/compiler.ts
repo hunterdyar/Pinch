@@ -19,7 +19,7 @@ function compileAndRun(canvas: HTMLCanvasElement, root: treeNode){
     let environment = new Environment()
 
     if(root.type != NodeType.Program){
-        throw new PEvalError("RootIsNotProgram","invalid root object.")
+        throw new PEvalError("RootIsNotProgram","invalid root object.", root)
     }
     root.children.forEach(child => {
         //@ts-ignore
@@ -40,7 +40,7 @@ function GetSVGFromCurrentPaperContext(){
 
 function compile(node:treeNode, env: Environment): RuntimeNode{
     if(!node){
-        throw new PEvalError("EmptyCompile","Can't compile nothing!")
+        throw new PEvalError("EmptyCompile","Can't compile nothing!", node)
     }
     let c: RuntimeNode
     switch(node.type){
@@ -68,7 +68,7 @@ function compile(node:treeNode, env: Environment): RuntimeNode{
             // }   
             break;
         case NodeType.Transformation:
-            let ctx = env.peek();
+            let ctx = env.peek(node);
             if(ctx != null){
                 if(ctx.type == RuntimeType.Procedure){
                     ctx.procudureValue?.statements.push(node);
@@ -77,27 +77,27 @@ function compile(node:treeNode, env: Environment): RuntimeNode{
                         compileTransformation(x,env)
                     });
                 }else{
-                    throw new Error("Can't apply transformation to "+node.type.toString())
+                    throw new PEvalError("BadType","Can't apply transformation to "+node.type.toString(),node)
                 }
             }
             
             break;
         case NodeType.Append:
             //add to current object.
-            c = env.peek();
+            c = env.peek(node);
             if(c != null){
                 if(c.type == RuntimeType.Procedure){
                     c.procudureValue?.pushStatement(node);
                 }else if (c.type == RuntimeType.Element){
                     compile(node.children[0],env);
-                    c.appendChildElement(env.active);
+                    c.appendChildElement(env.active,node);
                 }
             }else{
-                throw new PEvalError("EmptyStack","Cannot Append Nothing")
+                throw new PEvalError("EmptyStack","Cannot Append Nothing", node)
             }
             break;
         case NodeType.Push:
-            c = env.peek();
+            c = env.peek(node);
             if(c != null){
                 if(c.type == RuntimeType.Procedure){
                     c.procudureValue?.pushStatement(node);
@@ -109,7 +109,7 @@ function compile(node:treeNode, env: Environment): RuntimeNode{
             env.push(env.active); 
             break;
         case NodeType.Pop:
-            c = env.peek();
+            c = env.peek(node);
             if(c != null){
                 if(c.type == RuntimeType.Procedure){
                     //count the number of pushes in procedure! 
@@ -137,7 +137,7 @@ function compile(node:treeNode, env: Environment): RuntimeNode{
                 }
                 compilePopStatement(node.children[1],poppedChilds,env);
             }else{
-                throw new PEvalError("EmptyStack","Parsing error? bad number children for pop statement.")
+                throw new PEvalError("EmptyStack","Parsing error? bad number children for pop statement.", node)
             }
             break;
         case NodeType.Flow:
@@ -157,7 +157,7 @@ function compile(node:treeNode, env: Environment): RuntimeNode{
             break;
         
         default: 
-            throw new PEvalError("UnknownID","unable to compile node: '"+node.id+"'. node is type "+NodeType[node.type])
+            throw new PEvalError("UnknownID","unable to compile node: '"+node.id+"'. node is type "+NodeType[node.type], node)
         break;
     }
 }
@@ -169,7 +169,7 @@ function compileFlowStatement(node: treeNode, env: Environment){
         case "repeat":
             let l = call.children.length;
             if(l < 1){
-                throw new PEvalError("BadArgs","repeat: wrong number arguments. need at least 1")
+                throw new PEvalError("BadArgs","repeat: wrong number arguments. need at least 1", node)
             }
             let label = "_"
             let argi = 0;
@@ -192,42 +192,42 @@ function compileFlowStatement(node: treeNode, env: Environment){
                 end = compile(call.children[argi+1],env).getNumberValue();
                 step = compile(call.children[argi+2], env).getNumberValue();
             }else{
-                throw new PEvalError("BadArgs","repeat: wrong number arguments. got too many.")
+                throw new PEvalError("BadArgs","repeat: wrong number arguments. got too many.", node)
             }
 
             if(step == 0){
-                throw new PEvalError("BadArgs","repeat: step cannot be 0.")
+                throw new PEvalError("BadArgs","repeat: step cannot be 0.", node)
             } else if(start > end && step > 0){
-                throw new PEvalError("BadArgs","repeat: step moves away from end.")
+                throw new PEvalError("BadArgs","repeat: step moves away from end.", node)
             }else if(start < end && step < 0){
-                throw new PEvalError("BadArgs","repeat: step moves away from end.")
+                throw new PEvalError("BadArgs","repeat: step moves away from end.", node)
             }else if(start == end){
                 console.warn("Repeat: Start and end are the same? Nothing will happen.")
             }
 
-            env.pushFrame()
+            env.pushFrame(node)
             for(let i = start;i<end;i+=step){
-                env.setLocal(label,CreateNumberNode(i));
+                env.setLocal(label,CreateNumberNode(i),node);
                 body.forEach(s=>{
                     compile(s,env)
                 })
             }
-            env.popFrame();
+            env.popFrame(node);
             break;
         case "ifz":
         case "if-zero":
             //if zero
             let ifzl = call.children.length;
             if(ifzl != 1){
-                throw new PEvalError("BadArgs","ifz: wrong number arguments. need 1")
+                throw new PEvalError("BadArgs","ifz: wrong number arguments. need 1", node)
             }
             let test = compile(call.children[0],env).getNumberValue();
             if(test == 0){
-                env.pushFrame()
+                env.pushFrame(node)
                 body.forEach(s=>{
                     compile(s,env)
                 })
-                env.popFrame();
+                env.popFrame(node);
             }
         break
         case "ifnz":
@@ -235,15 +235,15 @@ function compileFlowStatement(node: treeNode, env: Environment){
             //if zero
             let ifnzl = call.children.length;
             if(ifnzl != 1){
-                throw new PEvalError("BadArgs","ifz: wrong number arguments. need 1")
+                throw new PEvalError("BadArgs","ifz: wrong number arguments. need 1", node)
             }
             let testnz = compile(call.children[0],env).getNumberValue();
             if(testnz != 0){
-                env.pushFrame()
+                env.pushFrame(node)
                 body.forEach(s=>{
                     compile(s,env)
                 })
-                env.popFrame();
+                env.popFrame(node);
             }
         break
         case "ifpos":
@@ -251,15 +251,15 @@ function compileFlowStatement(node: treeNode, env: Environment){
             //if zero
             let ifposl = call.children.length;
             if(ifposl != 1){
-                throw new PEvalError("BadArgs","ifz: wrong number arguments. need 1")
+                throw new PEvalError("BadArgs","ifz: wrong number arguments. need 1", node)
             }
             let testpos = compile(call.children[0],env).getNumberValue();
             if(testpos >= 0){
-                env.pushFrame()
+                env.pushFrame(node)
                 body.forEach(s=>{
                     compile(s,env)
                 })
-                env.popFrame();
+                env.popFrame(node);
             }
         break
         case "ifneg":
@@ -267,15 +267,15 @@ function compileFlowStatement(node: treeNode, env: Environment){
             //if zero
             let ifnegl = call.children.length;
             if(ifnegl != 1){
-                throw new PEvalError("BadArgs","ifz: wrong number arguments. need 1")
+                throw new PEvalError("BadArgs","ifz: wrong number arguments. need 1", node)
             }
             let testneg = compile(call.children[0],env).getNumberValue();
             if(testneg < 0){
-                env.pushFrame()
+                env.pushFrame(node)
                 body.forEach(s=>{
                     compile(s,env)
                 })
-                env.popFrame();
+                env.popFrame(node);
             }
         break
         case "def":
@@ -293,17 +293,17 @@ function compileFlowStatement(node: treeNode, env: Environment){
             const setDefs = new Set(argDefs);
 
             if(argDefs.length !== setDefs.size){
-                throw new PEvalError("BadArgs","Procedure @arguments must all have unique names.")
+                throw new PEvalError("BadArgs","Procedure @arguments must all have unique names.", node)
             }
    
-            env.addAndPushDefinition(name,def,argDefs)
+            env.addAndPushDefinition(name,def,argDefs,call)
             body.forEach(s=>{
                 compile(s,env)
             })
             env.pop();
         break;
         default:
-            throw new PEvalError("UnknownID","Unknown control flow statement "+node.id)
+            throw new PEvalError("UnknownID","Unknown control flow statement "+node.id, node)
         break;
     }
 }
@@ -331,7 +331,7 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
                 let r = compile(node.children[2],env).getNumberValue()
                 path = new paper.Path.Circle(new paper.Point(x,y),r);
             }else{
-                throw new Error("Circle: bad number of arguments. Want 1 (r) or 3 (x y r)")
+                throw new PEvalError("BadArgs","Circle: bad number of arguments. Want 1 (r) or 3 (x y r)",node)
             }
             //todo: sig should return a properties: values object.
             //d.setAttribute("stroke",env.getDefault("stroke"))
@@ -366,7 +366,7 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
             path = new paper.Path.Rectangle(pos,s);
 
         }else{
-            throw new PEvalError("BadArgs","Rect: bad number of arguments. Want 1 (square size) or 2 (width height) or 4 (x y width height)")
+            throw new PEvalError("BadArgs","Rect: bad number of arguments. Want 1 (square size) or 2 (width height) or 4 (x y width height)", node)
         }
             
         env.active = CreateElementNode(path)
@@ -382,7 +382,7 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
                 let b = new paper.Point(x2,y2)
                 path = new paper.Path.Line(a,b);
             }else{
-                throw new PEvalError("BadArgs","Line: bad number of arguments. Want 4 (x1 y1 x2 y2)")
+                throw new PEvalError("BadArgs","Line: bad number of arguments. Want 4 (x1 y1 x2 y2)", node)
             }
             env.active = CreateElementNode(path);
         break;
@@ -400,7 +400,7 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
                 path = new paper.Path.RegularPolygon(a,sides,radius);
             }
             else{
-                throw new PEvalError("BadArgs","Line: bad number of arguments. Want 2 (sides radius) or 4 (x y sides radius)")
+                throw new PEvalError("BadArgs","Line: bad number of arguments. Want 2 (sides radius) or 4 (x y sides radius)", node)
             }
             env.active = CreateElementNode(path);
         break;
@@ -421,7 +421,7 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
                 //env.active = CreateElementNode(textitem);
             }
             else{
-                throw new PEvalError("BadArgs","Text: bad number of arguments. Want 1 (text) or 3 (x y text)")
+                throw new PEvalError("BadArgs","Text: bad number of arguments. Want 1 (text) or 3 (x y text)", node)
             }
             break
         default:
@@ -434,9 +434,9 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
 }
 
 function compileTransformation(node:treeNode, env: Environment){
-    let contextNode = env.peek()
+    let contextNode = env.peek(node)
     if(contextNode.type != RuntimeType.Element){
-        throw new PEvalError("BadArgs","Can't compile context on type "+contextNode.type.toString()+". Groups not yet supported.")
+        throw new PEvalError("BadArgs","Can't compile context on type "+contextNode.type.toString()+". Groups not yet supported.", node)
     }
     let context = contextNode.elementValue;
     if(context == null || context == undefined){
@@ -494,7 +494,7 @@ function compileTransformation(node:treeNode, env: Environment){
         case "blendmode":
         case "bm":
             checkChildrenLengthForArgument(node,1)
-            context.SetBlendMode(compile(node.children[0],env).getStringValue())
+            context.SetBlendMode(compile(node.children[0],env).getStringValue(), node.children[0])
             break;
         case "opacity":
             checkChildrenLengthForArgument(node,1)
@@ -511,59 +511,59 @@ function compileTransformation(node:treeNode, env: Environment){
             context.opacity = 1-transparency
             break
         default:
-            throw new PEvalError("UnknownID","Unknown Transformation "+node.id);
+            throw new PEvalError("UnknownID","Unknown Transformation "+node.id, node);
     }
 }
 
 function compilePopStatement(node: treeNode ,args: RuntimeNode[], env: Environment){
     switch(node.id){
         case "subtract":
-            doBooleanOp("subtract",args,env);
+            doBooleanOp("subtract",args,env,node);
         break;
         case "intersect":
-            doBooleanOp("intersect",args,env);
+            doBooleanOp("intersect",args,env,node);
         break;
         case "exclude":
-            doBooleanOp("exclude",args,env);
+            doBooleanOp("exclude",args,env,node);
         break;
         case "unite":
-            doBooleanOp("unite",args,env);
+            doBooleanOp("unite",args,env,node);
             // a pop operator also pushes back to the stack.
         break;
         case "divide":
-            doBooleanOp("divide",args,env);
+            doBooleanOp("divide",args,env,node);
             break;
             // a pop operator also pushes back to the stack.
         break;
         case "append":
             if(args.length != 1){
-                throw new PEvalError("BadArgs","Append popop must have 2 elements e.g:(.append)")
+                throw new PEvalError("BadArgs","Append popop must have 2 elements e.g:(.append)", node)
             }
             let appe = args[0]
             if(!appe){
-                throw new PEvalError("BadStack","invalid runtime node")
+                throw new PEvalError("BadStack","invalid runtime node", node)
             }
             
             //new path item, now replace a.
             //env.peek().elementValue.item = path;
-            env.peek().appendChildElement(appe)
+            env.peek(node).appendChildElement(appe,node)
             // a pop operator also pushes back to the stack.
         break;
         default:
-            throw new PEvalError("UnknownID","Unknown Pop Statement "+node.id)
+            throw new PEvalError("UnknownID","Unknown Pop Statement "+node.id, node)
     }
 }
 
-function doBooleanOp(op: string, args: RuntimeNode[], env: Environment){
+function doBooleanOp(op: string, args: RuntimeNode[], env: Environment, node: treeNode){
     let path: paper.PathItem
     if(args.length == 1){                    
         let ae = args[0]?.elementValue
-        let be = env.peek().elementValue
+        let be = env.peek(node).elementValue
         if(!ae || !be){
-            throw new PEvalError("BadStack","invalid runtime node")
+            throw new PEvalError("BadStack","invalid runtime node",node)
         }
         if(ae.type != RuntimeElementType.Path || be.type != RuntimeElementType.Path){
-            throw new PEvalError("BadStack","Cannot perform boolean on group (yet)");
+            throw new PEvalError("BadStack","Cannot perform boolean on group (yet)",node);
         }
         let a = ae.item as paper.PathItem
         let b = be.item as paper.PathItem
@@ -585,7 +585,7 @@ function doBooleanOp(op: string, args: RuntimeNode[], env: Environment){
                 path = a.exclude(b);
                 break;
             default:
-                throw new PEvalError("UnknownID","unsupported pop operation "+op);
+                throw new PEvalError("UnknownID","unsupported pop operation "+op,node);
         }
         
         be.item = path
@@ -595,10 +595,10 @@ function doBooleanOp(op: string, args: RuntimeNode[], env: Environment){
         let ae = args[0]?.elementValue
         let be = args[1]?.elementValue
         if(!ae || !be){
-            throw new PEvalError("BadStack","invalid runtime node")
+            throw new PEvalError("BadStack","invalid runtime node",node)
         }
         if(ae.type != RuntimeElementType.Path || be.type != RuntimeElementType.Path){
-            throw new PEvalError("BadStack","Cannot perform boolean on group (yet)");
+            throw new PEvalError("BadStack","Cannot perform boolean on group (yet)",node);
         }
         let a = ae.item as paper.Path
         let b = be.item as paper.Path
@@ -620,7 +620,7 @@ function doBooleanOp(op: string, args: RuntimeNode[], env: Environment){
                 path = a.exclude(b);
                 break;
             default:
-                throw new PEvalError("BadStack","unsupported pop operation "+op);
+                throw new PEvalError("BadStack","unsupported pop operation "+op,node);
         }
 
         //new path item, now replace a.
@@ -628,21 +628,21 @@ function doBooleanOp(op: string, args: RuntimeNode[], env: Environment){
         env.active = CreateElementNode(path)
     }else{
         //if we only have one argument, it could modify the prior object, while two will pop both, subtract them, set active.
-        throw new PEvalError("BadArgs",op+" boolean popop must pop 1 (."+op+", modifies top) or 2 (.."+op+", creates new) stack arguments")
+        throw new PEvalError("BadArgs",op+" boolean popop must pop 1 (."+op+", modifies top) or 2 (.."+op+", creates new) stack arguments",node)
     }
 }
 
 function tryRunDefinitionLookup(node: treeNode, env:Environment):boolean{
     const id = node.id;
     if(env.hasDefinition(id)){
-        let proc = env.getDefinition(id)
+        let proc = env.getDefinition(id,node)
 
-        env.pushFrame();
+        env.pushFrame(node);
         //set local variables
         for(let i = 0;i<proc.argNames.length;i++){
             let id = proc.argNames[i];
             if(id){
-                env.setLocal(id, compile(node.children[i],env))
+                env.setLocal(id, compile(node.children[i],env),node)
             }
         }
         RuntimeNode
@@ -651,7 +651,7 @@ function tryRunDefinitionLookup(node: treeNode, env:Environment):boolean{
             compile(x,env);
         });
 
-        env.popFrame();
+        env.popFrame(node);
 
         return true
     }
@@ -660,7 +660,7 @@ function tryRunDefinitionLookup(node: treeNode, env:Environment):boolean{
 
 function checkChildrenLengthForArgument(node: treeNode, length: number){
     if(node.children.length != 1){
-        throw new PEvalError("ArgCount","bad number of arguments for ")
+        throw new PEvalError("ArgCount","bad number of arguments for "+node.id+". Expected 1, got "+node.children.length, node)
     }
 }
 

@@ -2,6 +2,7 @@ import { basicSetup } from "codemirror";
 import {EditorState, StateField} from "@codemirror/state"
 import {EditorView, keymap, ViewPlugin} from "@codemirror/view"
 import {defaultKeymap, indentWithTab} from "@codemirror/commands"
+import { linter, lintGutter, type Diagnostic } from "@codemirror/lint";
 import { CreatePinchDrawing } from "./pinch/parser";
 import {GetSVGFromCurrentPaperContext } from "./pinch/compiler"
 console.log("Starting!");
@@ -13,6 +14,7 @@ const exportpng = document.getElementById("exportPNGButton") as HTMLButtonElemen
 const metricResult = document.getElementById("metrics") as HTMLParagraphElement
 const localStorageKey = "pinchEditorValue"
 let starting = localStorage.getItem(localStorageKey);
+let diagnostics: Diagnostic[] = []
 
 if(!starting){
 starting = `{ def dot
@@ -48,15 +50,28 @@ const drawSVGOnChangePlugin = ViewPlugin.fromClass(class {
     destroy() { this.dom.remove() }
   })
 
+
+const pinchLinter = linter(view => {
+  
+  return diagnostics
+})
+
+
 let startState = EditorState.create({
     doc: starting,
-    extensions: [drawSVGOnChangePlugin,basicSetup,keymap.of(defaultKeymap), keymap.of(indentWithTab)]
+    extensions: [
+      basicSetup,keymap.of(defaultKeymap), keymap.of(indentWithTab),
+      drawSVGOnChangePlugin,
+      lintGutter(),
+      pinchLinter,
+    ]
 })
+
 
 let view = new EditorView({
     state: startState,
-    parent: inputContainer
-})
+    parent: inputContainer,
+  })
 
 function draw(code:string){
    // let text = inputBox.value
@@ -65,6 +80,7 @@ function draw(code:string){
         CreatePinchDrawing(output, code);
         errorp.innerText = ""
         performance.mark("pinch-end");
+        diagnostics = []
         const parsePerf = performance.measure("pinch-parse","pinch-start","parse-end");
         const compPerf = performance.measure("pinch-compile","parse-end","compile-end");
         const renderPerf = performance.measure("pinch-render","compile-end","pinch-end");
@@ -75,11 +91,17 @@ function draw(code:string){
                               " render "+renderPerf.duration+"ms"
     } catch (error: any) {
       //if here is to catch new errors i'm refactoring to. while still displaying old ones. 
-    
-        if(error.message){
+        diagnostics = []
+        if(error.message && error.from){
           console.error(error.message)
           errorp.innerText = error.message
           metricResult.innerText = error.name
+          diagnostics.push({
+            from: error.from,
+            to: error.to,
+            severity: "error",
+            message: error.message
+          })
         }else{
           console.error(error)
           errorp.innerText = error.toString()

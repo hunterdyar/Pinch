@@ -42,9 +42,9 @@ class Environment  {
             return this.root
         }
     }
-    peek():RuntimeNode{
+    peek(node:treeNode):RuntimeNode{
         if(this.stack.length == 0){
-            throw new PEvalError("EmptyStack","Empty Stack!")
+            throw new PEvalError("EmptyStack","Empty Stack!",node)
             //return this.baseSVG
         }
         
@@ -56,9 +56,9 @@ class Environment  {
             throw new Error("cannot peek")
         }
     }
-    addAndPushDefinition(identifier: string, body: treeNode[], args: string[]){
+    addAndPushDefinition(identifier: string, body: treeNode[], args: string[],idnode:treeNode){
         if(identifier in this.definitions){
-            throw new PEvalError("BadID","Can't define "+identifier+" . It is already defined.");
+            throw new PEvalError("BadID","Can't define "+identifier+" . It is already defined.", idnode);
         }
 
         //todo: two wrapper functions basically...
@@ -68,16 +68,16 @@ class Environment  {
     hasDefinition(identifier: string):boolean{
         return identifier in this.definitions
     }
-    getDefinition(identifier: string):Procedure
+    getDefinition(identifier: string, node: treeNode):Procedure
     {
         let x = this.definitions[identifier]
         if(x != undefined){
             return x;
         }else{
-            throw new PEvalError("BadID","Invlid definition lookup. "+identifier)
+            throw new PEvalError("BadID","Invlid definition lookup. "+identifier, node)
         }
     }
-    getDefault(key: string):string{
+    getDefault(key: string, node:treeNode):string{
         key = key.toLowerCase()
         if(key in this.defaults){
          let x = this.defaults[key]
@@ -86,23 +86,23 @@ class Environment  {
             return x;
          }
         }
-        throw new PEvalError("Unexpected","Unknown default key "+key);
+        throw new PEvalError("Unexpected","Unknown default key "+key,node);
     }
-    pushFrame(){
+    pushFrame(node: treeNode){
         //todo: picked this arbitrarily. i don't know what a good max is.
         if(this.frames.length >= this.maxFrameCount){
-            throw new PEvalError("StackOverflow","Stack Overflow Error")
+            throw new PEvalError("StackOverflow","Stack Overflow Error",node)
         }
         let f = {}
         this.frames.push(f)
         
     }
-    popFrame()
+    popFrame(node:treeNode)
     {
         if(this.frames.length >= 1){
             this.frames.pop()
         }else{
-            throw new PEvalError("FrameStack","Can't Pop Frame")
+            throw new PEvalError("FrameStack","Can't Pop Frame",node)
         }
     }
     printJSFrame():string {
@@ -123,17 +123,17 @@ class Environment  {
         }
         return print;
     }
-    setLocal(id: string, val: RuntimeNode){
+    setLocal(id: string, val: RuntimeNode, node: treeNode){
         if(this.frames.length >= 1){
             let frame = this.frames[this.frames.length-1];
             if(frame != undefined){
                 frame[id] = val
             }
         }else{
-            throw new PEvalError("FrameStack","Can't Set Local, there is no local frame.")
+            throw new PEvalError("FrameStack","Can't Set Local, there is no local frame.",node)
         }
     }
-    getLocal(id: string): RuntimeNode
+    getLocal(id: string, node: treeNode): RuntimeNode
     {
         if(this.frames.length >= 1){
             for(let f = this.frames.length-1;f>=0;f--){
@@ -144,9 +144,9 @@ class Environment  {
             }
             
         }else{
-            throw new PEvalError("FrameStack","Can't Get Local, there is no local frame")
+            throw new PEvalError("FrameStack","Can't Get Local, there is no local frame",node)
         }
-        throw new PEvalError("BadID","Unable to get local property "+id);
+        throw new PEvalError("BadID","Unable to get local property "+id,node);
     }
     getLocalOrNull(id: string): RuntimeNode | null{
         if(this.frames.length >= 1){

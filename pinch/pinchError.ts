@@ -1,19 +1,25 @@
 import type { Interval, MatchResult } from "ohm-js";
+import type { treeNode } from "./ast";
 
 class PEvalError implements EvalError{
     name: string;
     message: string;
     stack?: string | undefined;
     cause?: unknown;
+    from: number;
+    to: number;
 
-    constructor(name: string, message: string | undefined){
+    constructor(name: string, message: string | undefined, node: treeNode){
         this.name = name
         if(message){
             this.message = message
         }else{
             this.message = ""
         }
+        this.from = node.sourceInterval.startIdx
+        this.to = node.sourceInterval.endIdx
     }
+
 }
 
 class PSyntaxError implements SyntaxError{
@@ -21,7 +27,9 @@ class PSyntaxError implements SyntaxError{
     message: string;
     stack?: string | undefined;
     cause?: unknown;
-    interval: Interval //thius could be LineAndColumnInfo" or whatever CodeMirror wants.
+    interval: Interval
+    from: number //thius could be LineAndColumnInfo" or whatever CodeMirror wants.
+    to: number
 
     constructor(lex: MatchResult){
         this.name = "SyntaxError"
@@ -33,6 +41,8 @@ class PSyntaxError implements SyntaxError{
             this.message = "Syntax Error"
         }
         this.interval = lex.getInterval()
+        this.from = this.interval.startIdx
+        this.to = this.interval.endIdx
     }
 }
 
