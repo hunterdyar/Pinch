@@ -3,6 +3,7 @@ import { grammar } from "ohm-js";
 import { NodeType, treeNode } from "./ast";
 import { compileAndRun } from "./compiler";
 import { pnvGrammar } from "../gram/pmv.ohm";
+import { PSyntaxError } from "./pinchError";
 
 const g = grammar(pnvGrammar);
 
@@ -97,7 +98,7 @@ function CreatePinchDrawing(canvas: HTMLCanvasElement, input: string){
         compileAndRun(canvas, ast);
         return;
     }else{
-        throw new Error(lex.message)
+        throw new PSyntaxError(lex)
     }
 }
 

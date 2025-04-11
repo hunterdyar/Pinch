@@ -74,9 +74,17 @@ function draw(code:string){
                               " compile "+compPerf.duration+"ms" +
                               " render "+renderPerf.duration+"ms"
     } catch (error: any) {
-        console.error(error)
-        errorp.innerText = error.toString()
-        metricResult.innerText = "error"
+      //if here is to catch new errors i'm refactoring to. while still displaying old ones. 
+    
+        if(error.message){
+          console.error(error.message)
+          errorp.innerText = error.message
+          metricResult.innerText = error.name
+        }else{
+          console.error(error)
+          errorp.innerText = error.toString()
+          metricResult.innerText = "error"
+        }
     }  
 }
 
