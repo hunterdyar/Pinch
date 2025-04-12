@@ -342,11 +342,21 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
             env.active = CreateElementNode(path)
             
             break;
-        case "rect":
+        case "square":
+            if(node.children.length == 1){
+                let size = compile(node.children[0],env).getNumberValue()
+                let tr = new paper.Point(paper.view.center.x-size/2,paper.view.center.y-size/2)
+                let s = new paper.Size(size,size)
+                path = new paper.Path.Rectangle(tr,s);
+            }else{
+                throw new PEvalError("BadArgs","Square: bad number of arguments. Want 1 (size)", node)
+            }
+            break;
 
+        case "rect":
         if(node.children.length == 1){
             let size = compile(node.children[0],env).getNumberValue()
-            let tr = new paper.Point(paper.view.center.x-size/2,paper.view.center.y+size/2)
+            let tr = new paper.Point(paper.view.center.x-size/2,paper.view.center.y-size/2)
             let s = new paper.Size(size,size)
             path = new paper.Path.Rectangle(tr,s);
             
@@ -367,7 +377,7 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
             path = new paper.Path.Rectangle(pos,s);
 
         }else{
-            throw new PEvalError("BadArgs","Rect: bad number of arguments. Want 1 (square size) or 2 (width height) or 4 (x y width height)", node)
+            throw new PEvalError("BadArgs","Rect: bad number of arguments. Want 1 (square-size) or 2 (width height) or 4 (x y width height)", node)
         }
             
         env.active = CreateElementNode(path)
