@@ -92,7 +92,7 @@ function draw(code:string){
     } catch (error: any) {
       //if here is to catch new errors i'm refactoring to. while still displaying old ones. 
         diagnostics = []
-        if(error.message && error.from){
+        if(error.message && (error.from != undefined)){
           console.error(error.message)
           errorp.innerText = error.message
           metricResult.innerText = error.name

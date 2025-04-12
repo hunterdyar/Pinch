@@ -28,7 +28,11 @@ function compileAndRun(canvas: HTMLCanvasElement, root: treeNode){
     performance.mark("compile-end")
 
     environment.stack.forEach((rt:RuntimeNode)=>{
-        rt.elementValue?.Render();
+        if(rt.type == RuntimeType.Element){
+            rt.elementValue?.Render();
+        }else{
+            console.warn("unexpeted item on the stack. Ignoring.",rt);
+        }
     });
 
     return
@@ -438,7 +442,7 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
         default:
             //def lookup!            
             if(!tryRunDefinitionLookup(node,env)){
-                console.log("Warning. Unknown standalone object statement "+node.id)
+                throw new PEvalError("BadID","Unknown standalone object statement: "+node.id, node);
             }
         }
     //
