@@ -16,10 +16,11 @@
                 grid-template-areas:
                     'header header header'
                     'editor dragbar output'
-                    'editor dragbar options'
+                    'console dragbar output'
+                    'console dragbar options'
                     'footer footer footer';
                 grid-template-columns: 2fr 4px 2fr;
-                grid-template-rows: 6em 1fr 2em;
+                grid-template-rows: 6em 1fr auto 2em;
            }
            section{
                 overflow: auto;
@@ -74,7 +75,23 @@
             padding-left: 2px;
             vertical-align: middle;
            }
-
+           .console{
+            grid-area: console;
+            border-top: 1px solid black;
+            display: flex;
+            flex-direction: right;
+            padding-left: 2px;
+            height: fit-content;
+           }
+           .console svg{
+            padding-top: .25em;
+           }
+           .console p{
+            flex-grow: 10;
+            display: inline-block;
+            margin-top: 0;
+            margin-bottom: 0;
+           }
            .options button{
                 background-color: initial;
                 border: 1px solid black;
@@ -122,9 +139,10 @@
         </section>
         <section id="textentry" class="textentry">
             <div id="inputContainer"></div>
-            <div>
-                <p id="errorArea"></p>
-            </div>
+            
+        </section>
+        <section class="console">
+            <p id="errorArea">asdfg</p>
         </section>
         <div id="dragbar"></div>
         <section id ="preview" class="output">
