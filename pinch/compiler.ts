@@ -499,7 +499,7 @@ function compileTransformation(node:treeNode, env: Environment){
         case "rotate":
             checkChildrenLengthForArgument(node,1)
             if(context.type == RuntimeElementType.Path){
-                context.item.rotation = compile(node.children[0],env).getNumberValue()
+                context.item.rotate(compile(node.children[0],env).getNumberValue())
             }else{
                 throw new PEvalError("BadContext", "Rotations on groups not supported (yet).",node);
             }
@@ -511,7 +511,6 @@ function compileTransformation(node:treeNode, env: Environment){
                     let r = compile(node.children[0],env).getNumberValue()
                     let x = compile(node.children[1],env).getNumberValue()
                     let y = compile(node.children[2],env).getNumberValue()
-
                     context.item.rotate(r, new paper.Point(x,y))
                 }else{
                     throw new PEvalError("BadContext", "Rotations on groups not supported (yet).",node);
