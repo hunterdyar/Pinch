@@ -3,6 +3,7 @@ import { Environment } from "./environment";
 import { NodeType, treeNode, RuntimeNode, RuntimeElementType, CreateElementNode,CreateGroupNode, CreateNumberNode,CreateStringNode,RuntimeType } from "./ast";
 import paper from "paper";
 import { PEvalError } from "./pinchError";
+import { Point } from "paper/dist/paper-core";
 
 function compileAndRun(canvas: HTMLCanvasElement, root: treeNode){
 
@@ -495,6 +496,27 @@ function compileTransformation(node:treeNode, env: Environment){
             checkChildrenLengthForArgument(node,1)
             context.item.bounds.height = compile(node.children[0],env).getNumberValue()
             break
+        case "rotate":
+            checkChildrenLengthForArgument(node,1)
+            if(context.type == RuntimeElementType.Path){
+                context.item.rotation = compile(node.children[0],env).getNumberValue()
+            }else{
+                throw new PEvalError("BadContext", "Rotations on groups not supported (yet).",node);
+            }
+            break;
+        case "ra":
+        case "rotate-around":
+                checkChildrenLengthForArgument(node,3)
+                if(context.type == RuntimeElementType.Path){
+                    let r = compile(node.children[0],env).getNumberValue()
+                    let x = compile(node.children[1],env).getNumberValue()
+                    let y = compile(node.children[2],env).getNumberValue()
+
+                    context.item.rotate(r, new paper.Point(x,y))
+                }else{
+                    throw new PEvalError("BadContext", "Rotations on groups not supported (yet).",node);
+                }
+            break;
         case "stroke-width":
         case "sw":
             checkChildrenLengthForArgument(node,1)
@@ -723,7 +745,7 @@ function compileBlendmodeFromSingleNode(node:treeNode, env:Environment):string{
 
 
 function checkChildrenLengthForArgument(node: treeNode, length: number){
-    if(node.children.length != 1){
+    if(node.children.length != length){
         throw new PEvalError("ArgCount","bad number of arguments for "+node.id+". Expected 1, got "+node.children.length, node)
     }
 }
