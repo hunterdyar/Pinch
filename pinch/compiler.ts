@@ -5,7 +5,7 @@ import paper from "paper";
 import { PEvalError } from "./pinchError";
 import { Point } from "paper/dist/paper-core";
 
-function compileAndRun(canvas: HTMLCanvasElement, root: treeNode){
+function compileAndRun(canvas: HTMLCanvasElement, root: treeNode): Environment{
 
     //our own paper.Setup() because we want to overwrite, not append.
     if(paper.project){
@@ -36,7 +36,7 @@ function compileAndRun(canvas: HTMLCanvasElement, root: treeNode){
         }
     });
 
-    return
+    return environment
 }
 
 function GetSVGFromCurrentPaperContext(){
@@ -161,7 +161,9 @@ function compile(node:treeNode, env: Environment): RuntimeNode{
             let expression = "'use strict';\n"+env.printJSFrame()+"\n"+node.id
             return eval?.(expression) 
             break;
-        
+        case NodeType.EnvironmentProperty:
+            compileEnvironmentProperty(node,env);
+            break;
         default: 
             throw new PEvalError("UnknownID","unable to compile node: '"+node.id+"'. node is type "+NodeType[node.type], node)
         break;
@@ -589,6 +591,28 @@ function compilePopStatement(node: treeNode ,args: RuntimeNode[], env: Environme
             throw new PEvalError("UnknownID","Unknown Pop Statement "+node.id, node)
     }
 }
+
+function compileEnvironmentProperty(node: treeNode, env: Environment){
+    console.log(node)
+    switch(node.id){
+        case "width":
+            checkChildrenLengthForArgument(node,1);
+            let w = compile(node.children[0],env).getNumberValue()
+            env.width = w;
+            paper.view.viewSize.width = w;
+            console.log("set width to ",w)
+            break
+        case "height":
+            checkChildrenLengthForArgument(node,1);
+            let h = compile(node.children[0],env).getNumberValue()
+            env.height = h;
+            paper.view.viewSize.height = h;
+        break;
+        default:
+            throw new PEvalError("UnknownID","Unknown Environment Property "+node.id,node);
+    }
+}
+
 
 function doBooleanOp(op: string, args: RuntimeNode[], env: Environment, node: treeNode){
     let path: paper.PathItem

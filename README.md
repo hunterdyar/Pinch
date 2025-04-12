@@ -72,13 +72,14 @@ The > is the "push" operator. It put's what is on it's left on the "stack". The 
 ### Stack Operations
 [op] [identifier] [space-separated parameters]
 
-|, + and ~ are stack operators. They do something to whatever is currently on the top of the stack. 
+|, +, # and ~ are stack operators. They do something to whatever is currently on the top of the stack. 
 
 - \+ (append) adds it's argument as a child to the one on the stack. Usually it's adding an item to a group.
 - | (pipe) is a transformation, it changes some attribute of the object on the top of the stack.
 - ~ (tilde) is a conversion. It alters (type casting/converting) the object on the stack, or otherwise significantly changes the object on the stack. It only affects the topmost object.
 - . (dot) is a pop operator. Alone, it simply pops. If an identifier follows one or more dots, it will pop 1 or more objects and do something with them. e.g ..subtract or .append
 > If you don't include an operator, but you're on the root of the stack (the base canvas) it will append for convenience. The '+' symbol is always recommended anyway for clarity.
+- \# is for 'Environment Properties'. These may be overridden by the renderer. Most common is setting the canvas width/height or other document metadata. That sort of thing.
 
 ### Flow Operations
 [{] [identifier] [space-seperated parameters] [newline] [list of statements] [}]

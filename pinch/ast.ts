@@ -17,7 +17,8 @@ enum NodeType {
     BodyStatement,
     Transformation,
     Procedure,
-    Block
+    Block,
+    EnvironmentProperty
 }
 
 class treeNode {

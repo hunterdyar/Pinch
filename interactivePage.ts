@@ -5,6 +5,7 @@ import {defaultKeymap, indentWithTab} from "@codemirror/commands"
 import { linter, lintGutter, type Diagnostic } from "@codemirror/lint";
 import { CreatePinchDrawing } from "./pinch/parser";
 import {GetSVGFromCurrentPaperContext } from "./pinch/compiler"
+import { OutputFileType } from "typescript";
 console.log("Starting!");
 const inputContainer = document.getElementById("inputContainer") as HTMLDivElement
 const output = document.getElementById("outputCanvas") as HTMLCanvasElement
@@ -77,7 +78,13 @@ function draw(code:string){
    // let text = inputBox.value
    try {
         performance.mark("pinch-start");
-        CreatePinchDrawing(output, code);
+        let e = CreatePinchDrawing(output, code);
+
+        output.width = e.width;
+        output.style.width = e.width+"px"
+        output.height = e.height;
+        output.style.height = e.height+"px"
+
         errorp.innerHTML = '<svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-mood-smile"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M9 10l.01 0" /><path d="M15 10l.01 0" /><path d="M9.5 15a3.5 3.5 0 0 0 5 0" /></svg>'
         performance.mark("pinch-end");
         diagnostics = []

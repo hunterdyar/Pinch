@@ -1,8 +1,8 @@
 import { RuntimeNode, Procedure, CreateGroupNode, CreateProcedureNode, treeNode,  } from "./ast"
 import { PEvalError } from "./pinchError"
 class Environment  {
-    width: Number = 256
-    height: Number = 256
+    width: number = 256
+    height: number = 256
     active: RuntimeNode | null = null
     root: RuntimeNode
     stack: RuntimeNode[] = []

@@ -4,6 +4,8 @@ import { NodeType, treeNode } from "./ast";
 import { compileAndRun } from "./compiler";
 import { pnvGrammar } from "../gram/pmv.ohm";
 import { PSyntaxError } from "./pinchError";
+import type { Env } from "bun";
+import type { Environment } from "./environment";
 
 const g = grammar(pnvGrammar);
 
@@ -29,6 +31,11 @@ s.addOperation("toTree",{
     //@ts-ignore
     AppendOperation(a,b){
         return new treeNode(NodeType.Append,b.sourceString, [b.toTree()], b.source)
+    },
+    //@ts-ignore
+    EnvStatement(a,b){
+        let os = b.toTree();
+        return new treeNode(NodeType.EnvironmentProperty, os.id, os.children,b.source)
     },
     //@ts-ignore
     PushOperation(a,b){
@@ -88,14 +95,13 @@ s.addOperation("toTree",{
 })
 
 
-function CreatePinchDrawing(canvas: HTMLCanvasElement, input: string){
+function CreatePinchDrawing(canvas: HTMLCanvasElement, input: string): Environment{
     let lex = g.match(input);
     if(lex.succeeded())
     {
         let ast = s(lex).toTree();
         performance.mark("parse-end");
-        compileAndRun(canvas, ast);
-        return;
+        return compileAndRun(canvas, ast);
     }else{
         throw new PSyntaxError(lex)
     }

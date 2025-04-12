@@ -62,26 +62,29 @@ bodyDelim = ("\n" | ";")
     doPop = "." ~digit
     doAppend = "+"
     doAlter = "~" | "^"
- 	doFlow = "{"
+ 	  doFlow = "{"
+    endFlow = "}"
     pipe = "|"
     doLabel = "@"
-    endFlow = "}"
+    doEnv = "#"
     
-    operator = doPush | doPop | doAlter | pipe | doAppend | endFlow | doLabel
+    operator = doPush | doPop | doAlter | pipe | doAppend | endFlow | doLabel | doEnv
     
 	literal = 
     ~operator ident
     | ~operator number
     | ~operator stringLiteral
     | ~operator rawjsLiteral
-
     
-    Statement = 
-    MetaStatement
+  Statement = 
+  MetaStatement
 |   ObjectStatement
-    
-    FlowStatement = 
-    doFlow objectStatement Statement* endFlow
+  
+  FlowStatement = 
+  doFlow objectStatement Statement* endFlow
+  
+  EnvStatement =
+  doEnv objectStatement
     
   ObjectStatement =
   | Transformation
@@ -92,32 +95,33 @@ bodyDelim = ("\n" | ";")
   | PushOperation
   | popOperation
   | FlowOperation
+  | EnvStatement
 
 
-popOperation =
-| (doPop ~whitespace)+ doAppend
-| (doPop ~whitespace)+ objectStatement?
+  popOperation =
+  | (doPop ~whitespace)+ doAppend
+  | (doPop ~whitespace)+ objectStatement?
 
-objectStatement =
-//| ident Object #sc?
-| ident whitespace? listOf<object,whitespace>
-    
-    PushOperation =
-    (ObjectStatement | AppendOperation | popOperation) doPush
-    AppendOperation =
-    doAppend objectStatement
-    Transformation
-    = pipe objectStatement
-    
-    FlowOperation =
-    doFlow objectStatement Statement* endFlow
-    
-    label = doLabel ident
-   
-    object
-    = ~operator ident 
-    | ~operator literal
-    | label
+  objectStatement =
+  //| ident Object #sc?
+  | ident whitespace? listOf<object,whitespace>
+      
+  PushOperation =
+  (ObjectStatement | AppendOperation | popOperation) doPush
+  AppendOperation =
+  doAppend objectStatement
+  Transformation
+  = pipe objectStatement
+  
+  FlowOperation =
+  doFlow objectStatement Statement* endFlow
+  
+  label = doLabel ident
+  
+  object
+  = ~operator ident 
+  | ~operator literal
+  | label
 
   ident  (an identifier)
     = ~reservedKeyword (letter | "#") ( "-" | "_" | "#" | alnum)* 
