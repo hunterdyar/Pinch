@@ -1,12 +1,13 @@
 import { basicSetup } from "codemirror";
-import {EditorState, StateField} from "@codemirror/state"
-import {EditorView, keymap, ViewPlugin} from "@codemirror/view"
+import {EditorState, StateEffect, StateField} from "@codemirror/state"
+import {gutter, GutterMarker} from "@codemirror/view"
+import {EditorView, keymap, ViewPlugin, type EditorViewConfig} from "@codemirror/view"
 import {defaultKeymap, indentWithTab} from "@codemirror/commands"
 import { linter, lintGutter, type Diagnostic } from "@codemirror/lint";
 import { CreatePinchDrawing } from "./pinch/parser";
 import {GetSVGFromCurrentPaperContext } from "./pinch/compiler"
-import { OutputFileType } from "typescript";
-console.log("Starting!");
+import { Environment } from "./pinch/environment";
+
 const inputContainer = document.getElementById("inputContainer") as HTMLDivElement
 const output = document.getElementById("outputCanvas") as HTMLCanvasElement
 const errorp = document.getElementById("errorArea") as HTMLParagraphElement
@@ -16,6 +17,7 @@ const metricResult = document.getElementById("metrics") as HTMLParagraphElement
 const localStorageKey = "pinchEditorValue"
 let starting = localStorage.getItem(localStorageKey);
 let diagnostics: Diagnostic[] = []
+let environment: Environment
 
 if(!starting){
 starting = `{ def dot
@@ -37,6 +39,13 @@ starting = `{ def dot
 `
 }
 
+const environmentField = StateField.define<Environment>({
+  create(s){return environment},
+  update(state,transaction){
+    return environment
+  }
+})
+
 const drawSVGOnChangePlugin = ViewPlugin.fromClass(class {
     constructor(view: any) {
         draw(view.state.doc)
@@ -53,37 +62,95 @@ const drawSVGOnChangePlugin = ViewPlugin.fromClass(class {
 
 
 const pinchLinter = linter(view => {
-  
   return diagnostics
 })
 
+let updateEnvironment = StateEffect<Environment>.define({
+  map(value, mapping) {
+    return undefined
+  },
+})
 
-let startState = EditorState.create({
+
+class StackGutterMarker  extends GutterMarker {
+  val: number = 0
+  constructor(val: number){
+    super()
+    this.val = val
+  }
+
+  toDOM() {
+    let t = ""
+    for(let i = 0;i<this.val;i++) t+="|"
+    
+    return document.createTextNode(t.toString()) }
+}
+const gutterMarkers: Dict<StackGutterMarker> ={
+  "0": new StackGutterMarker(0),
+  "1": new StackGutterMarker(1),
+  "2": new StackGutterMarker(2),
+  "3": new StackGutterMarker(3),
+  "4": new StackGutterMarker(4),
+  "5": new StackGutterMarker(5),
+}
+
+const stackViewGutter = gutter({
+  lineMarker(view, line){
+      let num = line.to
+      if(environment){
+        //this is slow, silly, stupid, and feels bad? doc points instead of line numbers make sense but...
+        let stackdec = environment.getStackInfoAtPoint(num)
+        if(stackdec){
+          if(stackdec in gutterMarkers){
+            let o = gutterMarkers[stackdec]
+            if(o){
+              return o;
+            }
+          }else{
+            let m = new StackGutterMarker(stackdec)
+            gutterMarkers[stackdec] = m;
+            return m;
+          }
+        }
+      }
+      return null
+  },
+  initialSpacer: () => new StackGutterMarker(0)
+})
+
+
+let state = EditorState.create({
     doc: starting,
     extensions: [
       basicSetup,keymap.of(defaultKeymap), keymap.of(indentWithTab),
       drawSVGOnChangePlugin,
       lintGutter(),
+      stackViewGutter,
       pinchLinter,
+      environmentField,
     ]
 })
 
-
 let view = new EditorView({
-    state: startState,
+    state: state,
     parent: inputContainer,
   })
+
+function reconfigureCanvas(){
+  output.width = environment.width;
+  output.style.width = environment.width+"px"
+  output.height = environment.height;
+  output.style.height = environment.height+"px"
+}
+
 
 function draw(code:string){
    // let text = inputBox.value
    try {
         performance.mark("pinch-start");
-        let e = CreatePinchDrawing(output, code);
-
-        output.width = e.width;
-        output.style.width = e.width+"px"
-        output.height = e.height;
-        output.style.height = e.height+"px"
+        environment = CreatePinchDrawing(output, code);
+        //resize, etc, from env.
+        reconfigureCanvas();
 
         errorp.innerHTML = '<svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-mood-smile"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M9 10l.01 0" /><path d="M15 10l.01 0" /><path d="M9.5 15a3.5 3.5 0 0 0 5 0" /></svg>'
         performance.mark("pinch-end");

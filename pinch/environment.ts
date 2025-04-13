@@ -1,5 +1,10 @@
 import { RuntimeNode, Procedure, CreateGroupNode, CreateProcedureNode, treeNode,  } from "./ast"
 import { PEvalError } from "./pinchError"
+
+type StackOp={
+    pos: number
+    type: string
+}
 class Environment  {
     width: number = 256
     height: number = 256
@@ -7,6 +12,9 @@ class Environment  {
     root: RuntimeNode
     stack: RuntimeNode[] = []
     frames: Dict<RuntimeNode>[] = [] 
+    stackInfo: StackOp[] = []
+    stackSets: Dict<number> = {}
+
     maxFrameCount = 2048
     defaults: Dict<string> = {
         "stroke": "black",
@@ -25,16 +33,19 @@ class Environment  {
  
         this.stack.push(this.root)
     }
-    push(i:RuntimeNode | null){
+    push(i:RuntimeNode | null, node: treeNode){
         if(i != null){
             let b4 = this.stack.length
             this.stack.push(i)
         }else{
             console.warn("[x pushed null]")
         }
+        this.stackInfo.push({pos: node.sourceInterval.startIdx, type: ">"})
     }
-    pop():RuntimeNode{
+    pop(node:treeNode):RuntimeNode{
         let x= this.stack.pop();
+        //multiple pops?
+        this.stackInfo.push({pos: node.sourceInterval.startIdx, type: "."})
         if(x){
             return x
         }else{
@@ -63,7 +74,7 @@ class Environment  {
 
         //todo: two wrapper functions basically...
         this.definitions[identifier] = new Procedure(identifier, args, body);
-        this.push(CreateProcedureNode(this.definitions[identifier]))
+        this.push(CreateProcedureNode(this.definitions[identifier]),idnode)
     }
     hasDefinition(identifier: string):boolean{
         return identifier in this.definitions
@@ -158,6 +169,18 @@ class Environment  {
             }
         }
         return null;
+    }
+    getStackInfoAtPoint(docPoint: number):number{
+        let s = 0;
+        this.stackInfo.forEach(op=>{
+            if(op.pos <= docPoint){
+                switch (op.type){
+                    case ">": s++; break;
+                    case ".": s--; break;
+                }
+            }
+        });
+        return s;
     }
 }
 export {Environment}
