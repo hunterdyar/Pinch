@@ -99,8 +99,8 @@ bodyDelim = ("\n" | ";")
 
 
   popOperation =
-  | (doPop ~whitespace)+ doAppend
-  | (doPop ~whitespace)+ objectStatement?
+  | (doPop)+ doAppend
+  | (doPop)+ objectStatement?
 
   objectStatement =
   //| ident Object #sc?
