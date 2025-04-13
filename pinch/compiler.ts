@@ -3,7 +3,7 @@ import { Environment } from "./environment";
 import { NodeType, treeNode, RuntimeNode, RuntimeElementType, CreateElementNode,CreateGroupNode, CreateNumberNode,CreateStringNode,RuntimeType } from "./ast";
 import paper from "paper";
 import { PEvalError } from "./pinchError";
-import { Point } from "paper/dist/paper-core";
+
 
 function compileAndRun(canvas: HTMLCanvasElement, root: treeNode): Environment{
 
@@ -112,7 +112,7 @@ function compile(node:treeNode, env: Environment): RuntimeNode{
             }
             //else
             compile(node.children[0], env)
-            env.push(env.active); 
+            env.push(env.active,node); 
             break;
         case NodeType.Pop:
             c = env.peek(node);
@@ -132,14 +132,14 @@ function compile(node:treeNode, env: Environment): RuntimeNode{
             if(node.children.length == 1){
                 //pop the number of dots.
                 for(let pops = 0;pops<node.children[0];pops++){
-                    env.pop();
+                    env.pop(node);
                 }
             }else if(node.children.length == 2){
 
                 let poppedChilds = []
                 //pop the number of dots and shove em into a list for us to use...
                 for(let pops = 0;pops<node.children[0];pops++){
-                    poppedChilds.push(env.pop());
+                    poppedChilds.push(env.pop(node));
                 }
                 compilePopStatement(node.children[1],poppedChilds,env);
             }else{
@@ -308,7 +308,7 @@ function compileFlowStatement(node: treeNode, env: Environment){
             body.forEach(s=>{
                 compile(s,env)
             })
-            env.pop();
+            env.pop(node);
         break;
         default:
             throw new PEvalError("UnknownID","Unknown control flow statement "+node.id, node)
@@ -593,14 +593,12 @@ function compilePopStatement(node: treeNode ,args: RuntimeNode[], env: Environme
 }
 
 function compileEnvironmentProperty(node: treeNode, env: Environment){
-    console.log(node)
     switch(node.id){
         case "width":
             checkChildrenLengthForArgument(node,1);
             let w = compile(node.children[0],env).getNumberValue()
             env.width = w;
             paper.view.viewSize.width = w;
-            console.log("set width to ",w)
             break
         case "height":
             checkChildrenLengthForArgument(node,1);

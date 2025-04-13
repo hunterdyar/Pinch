@@ -1,12 +1,22 @@
-import { RuntimeNode, Procedure, CreateGroupNode, CreateProcedureNode, treeNode,  } from "./ast"
+import { RuntimeNode, Procedure, CreateGroupNode, CreateProcedureNode, treeNode, RuntimeElementType,  } from "./ast"
 import { PEvalError } from "./pinchError"
+
+class StackMetaItem {
+    start: number = 0
+    end: number | undefined = undefined
+}
+
 class Environment  {
-    width: number = 256
-    height: number = 256
+    //todo: currently a bug where the width and height need to match what the canvas defaults. Currently set in css.
+    //
+    width: number = 200
+    height: number = 200
     active: RuntimeNode | null = null
     root: RuntimeNode
     stack: RuntimeNode[] = []
     frames: Dict<RuntimeNode>[] = [] 
+    stackMetaItems: StackMetaItem[] = []
+    stackMetaIndices: number[] = []
     maxFrameCount = 2048
     defaults: Dict<string> = {
         "stroke": "black",
@@ -25,21 +35,38 @@ class Environment  {
  
         this.stack.push(this.root)
     }
-    push(i:RuntimeNode | null){
+    push(i:RuntimeNode | null, node: treeNode){
         if(i != null){
             let b4 = this.stack.length
             this.stack.push(i)
         }else{
             console.warn("[x pushed null]")
         }
+        let lineNum = node.sourceInterval.getLineAndColumn().lineNum
+        let x = this.stackMetaItems.push({start: lineNum, end: undefined})
+        this.stackMetaIndices.push(x-1)
     }
-    pop():RuntimeNode{
+    pop(node:treeNode):RuntimeNode{
+        if(this.stack.length == 1){
+            throw new PEvalError("EmptyStack","Nothing to pop!",node)
+        }
         let x= this.stack.pop();
+        let lineNum = node.sourceInterval.getLineAndColumn().lineNum
+        //dumb gutter calculation things
+        let index = this.stackMetaIndices.pop();
+        if(index != undefined){
+            let top = this.stackMetaItems[index]
+            if(top){
+                top.end = lineNum
+            }
+        }
+
+        //actual work:
         if(x){
             return x
         }else{
-            console.log("popped empty stack!",this.stack)
-            return this.root
+            //console.log("popped empty stack!",this.stack)
+            throw new PEvalError("EmptyStack","Empty Stack!",node)
         }
     }
     peek(node:treeNode):RuntimeNode{
@@ -63,7 +90,7 @@ class Environment  {
 
         //todo: two wrapper functions basically...
         this.definitions[identifier] = new Procedure(identifier, args, body);
-        this.push(CreateProcedureNode(this.definitions[identifier]))
+        this.push(CreateProcedureNode(this.definitions[identifier]),idnode)
     }
     hasDefinition(identifier: string):boolean{
         return identifier in this.definitions
@@ -160,4 +187,4 @@ class Environment  {
         return null;
     }
 }
-export {Environment}
+export {Environment, StackMetaItem}

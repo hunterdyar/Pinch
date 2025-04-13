@@ -1,12 +1,14 @@
 import { basicSetup } from "codemirror";
-import {EditorState, StateField} from "@codemirror/state"
-import {EditorView, keymap, ViewPlugin} from "@codemirror/view"
+import {EditorState, StateEffect, StateField} from "@codemirror/state"
+import {Decoration, DecorationSet, gutter, GutterMarker} from "@codemirror/view"
+import {EditorView, keymap, ViewPlugin, type EditorViewConfig} from "@codemirror/view"
 import {defaultKeymap, indentWithTab} from "@codemirror/commands"
 import { linter, lintGutter, type Diagnostic } from "@codemirror/lint";
 import { CreatePinchDrawing } from "./pinch/parser";
 import {GetSVGFromCurrentPaperContext } from "./pinch/compiler"
-import { OutputFileType } from "typescript";
-console.log("Starting!");
+import { Environment, StackMetaItem } from "./pinch/environment";
+import { env } from "bun";
+
 const inputContainer = document.getElementById("inputContainer") as HTMLDivElement
 const output = document.getElementById("outputCanvas") as HTMLCanvasElement
 const errorp = document.getElementById("errorArea") as HTMLParagraphElement
@@ -16,6 +18,7 @@ const metricResult = document.getElementById("metrics") as HTMLParagraphElement
 const localStorageKey = "pinchEditorValue"
 let starting = localStorage.getItem(localStorageKey);
 let diagnostics: Diagnostic[] = []
+let environment: Environment
 
 if(!starting){
 starting = `{ def dot
@@ -37,6 +40,13 @@ starting = `{ def dot
 `
 }
 
+const environmentField = StateField.define<Environment>({
+  create(s){return environment},
+  update(state,transaction){
+    return environment
+  }
+})
+
 const drawSVGOnChangePlugin = ViewPlugin.fromClass(class {
     constructor(view: any) {
         draw(view.state.doc)
@@ -45,6 +55,16 @@ const drawSVGOnChangePlugin = ViewPlugin.fromClass(class {
       if (update.docChanged){
         draw(update.state.doc)
         localStorage.setItem(localStorageKey,update.state.doc)
+
+        //CodeMirror plugin crashed: Error: Calls to EditorView.update are not allowed while an update is in progress
+        
+        //when the fuck are we supposed to update things?
+
+        // environment.stackMetaItems.forEach(x=>{
+        //   view.dispatch({
+        //     effects: addStackMetaItem.of({from:x.start, to: ((x!=undefined) ? x.end : 0)})
+        //     })
+        // })
       }
     }
     //@ts-ignore
@@ -52,38 +72,169 @@ const drawSVGOnChangePlugin = ViewPlugin.fromClass(class {
   })
 
 
+
 const pinchLinter = linter(view => {
-  
   return diagnostics
 })
+const blockColors = ["#5E7432","#FFCB67","#CE6039","#95C55F","#A04615","#F78059"]
+const gutterBlockWidth = "4px";
+class StackGutterMarker extends GutterMarker {
+  val: string = ""
+  innerItem: HTMLElement
+  
+  constructor(val: string){
+    super()
+    this.val = val;
+    this.innerItem = document.createElement("span");    
+    this.innerItem.style.position = "relative";
+    for (let i = 0; i < val.length; i++) {
+      const element = val.charAt(i)
+      switch(element){
+        case "|":
+          let box = document.createElement("span")
+          box.classList.add("stackBlockGutterItem")
+          //@ts-ignore
+          box.innerHTML ='<svg  xmlns="http://www.w3.org/2000/svg"  preserveAspectRatio="none" width="100%"  height="100%"  viewBox="0 0 10 10"  fill="'+blockColors[i%blockColors.length]+'"><path stroke="none" d="m0,0 v11 h10 v-11 z"/></svg>';
+          box.style.display = "inline-block"
+          this.innerItem.appendChild(box);
+          break;
+          case "\\":
+            let top = document.createElement("span")
+            top.classList.add("stackBlockGutterItem")
+            //@ts-ignore
+            top.innerHTML ='<svg  xmlns="http://www.w3.org/2000/svg"  preserveAspectRatio="none" width="100%"  height="100%"  viewBox="0 0 10 10"  fill="'+blockColors[i%blockColors.length]+'"><path stroke="none" d="m0,0 v11 h11 z"/></svg>';
+            //top.style.backgroundColor = blockColors[i%blockColors.length]
+            top.style.display = "inline-block"
+            this.innerItem.appendChild(top);
+            break;
+          case "/":
+            let bot = document.createElement("span")
+            bot.classList.add("stackBlockGutterItem")
+            //@ts-ignore
+            bot.innerHTML ='<svg  xmlns="http://www.w3.org/2000/svg"  preserveAspectRatio="none" width="100%"  height="100%"  viewBox="0 0 10 10"  fill="'+blockColors[i%blockColors.length]+'"><path d="m0,0 h10 L0,10 z"/></svg>';
+            //top.style.backgroundColor = blockColors[i%blockColors.length]
+            bot.style.display = "inline-block"
+            this.innerItem.appendChild(bot);
+            break;
+          case "o":
+            let sir = document.createElement("span")
+            sir.classList.add("stackBlockGutterItem")
+            //@ts-ignore
+            sir.innerHTML ='<svg  xmlns="http://www.w3.org/2000/svg"  preserveAspectRatio="none" width="100%"  height="100%"  viewBox="0 0 10 10"  fill="'+blockColors[i%blockColors.length]+'"><path stroke="none" d="m0,0 L10,5 L0,10 z"/></svg>';
+            sir.style.display = "inline-block"
+            this.innerItem.appendChild(sir);
+            break;
+        default:
+          let d = document.createElement("span")
+          d.style.display = "inline-block"
+          d.innerText = element;
+          this.innerItem.appendChild(d); 
+      }
+    }
+    //this.innerItem.innerText = this.val.toString()
+
+  }
 
 
-let startState = EditorState.create({
+  toDOM() {
+    return this.innerItem.cloneNode(true)
+  }
+}
+
+const gutterMarkers: Dict<StackGutterMarker> = {}
+const emptyStackGutterMarker = new StackGutterMarker("")
+const stackViewGutter = gutter({
+  lineMarker(view, line){
+      //Right now we are drawing characters for every line.
+      let num = view.state.doc.lineAt(line.from).number
+
+      if(environment){
+        //this is slow, silly, stupid, and feels bad? doc points instead of line numbers make sense but...
+        let stackdec = ""
+        for(let i = 0;i<environment.stackMetaItems.length;i++){
+          const sm = environment.stackMetaItems[i]
+          if(!sm){continue}
+
+          //if it's unclosed.
+          if(sm.end===undefined){
+            let end = view.state.doc.lineAt(view.state.doc.length).number
+            //plus 1 so we don't draw end-caps.
+            sm.end = end+1
+          }
+
+          if(num === sm.start && num === sm.end){
+            stackdec+="o"
+          }else{
+            if(num == sm.start){
+              stackdec +="\\"
+            }else if(num > sm.start){
+              if(sm.end != undefined){
+                if(num < sm.end){
+                  stackdec +="|"
+                }else if(num == sm.end){
+                  stackdec += "/"
+                }
+              }
+            }
+          }
+        }//end loop
+        if(stackdec != undefined){
+          return getGutterMarker(stackdec)
+        }
+      }
+      return null
+  },
+  initialSpacer: () => emptyStackGutterMarker
+})
+
+function getGutterMarker(dec: string) : StackGutterMarker{
+  let stack = dec
+  if(stack in gutterMarkers){
+    let o = gutterMarkers[stack]
+    if(o){
+      return o;
+    }
+  }else{
+    let m = new StackGutterMarker(stack)
+    gutterMarkers[stack] = m;
+    return m;
+  }
+  //
+  return new StackGutterMarker("")
+}
+
+let state = EditorState.create({
     doc: starting,
     extensions: [
       basicSetup,keymap.of(defaultKeymap), keymap.of(indentWithTab),
       drawSVGOnChangePlugin,
       lintGutter(),
+      stackViewGutter,
       pinchLinter,
+      environmentField,
     ]
 })
 
-
 let view = new EditorView({
-    state: startState,
+    state: state,
     parent: inputContainer,
   })
+
+function reconfigureCanvas(){
+  output.width = environment.width;
+  output.style.width = environment.width+"px"
+  output.height = environment.height;
+  output.style.height = environment.height+"px"
+}
+
 
 function draw(code:string){
    // let text = inputBox.value
    try {
         performance.mark("pinch-start");
-        let e = CreatePinchDrawing(output, code);
-
-        output.width = e.width;
-        output.style.width = e.width+"px"
-        output.height = e.height;
-        output.style.height = e.height+"px"
+        environment = CreatePinchDrawing(output, code);
+        //resize, etc, from env.
+        reconfigureCanvas();
 
         errorp.innerHTML = '<svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-mood-smile"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M9 10l.01 0" /><path d="M15 10l.01 0" /><path d="M9.5 15a3.5 3.5 0 0 0 5 0" /></svg>'
         performance.mark("pinch-end");
