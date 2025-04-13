@@ -1,6 +1,11 @@
 import { RuntimeNode, Procedure, CreateGroupNode, CreateProcedureNode, treeNode, RuntimeElementType,  } from "./ast"
 import { PEvalError } from "./pinchError"
 
+class StackMetaItem {
+    start: number = 0
+    end: number | undefined = undefined
+}
+
 class Environment  {
     width: number = 256
     height: number = 256
@@ -8,7 +13,8 @@ class Environment  {
     root: RuntimeNode
     stack: RuntimeNode[] = []
     frames: Dict<RuntimeNode>[] = [] 
-    lineStackInfo: string[][] = []
+    stackMetaItems: StackMetaItem[] = []
+    stackMetaIndex: number = 0
     maxFrameCount = 2048
     defaults: Dict<string> = {
         "stroke": "black",
@@ -26,6 +32,7 @@ class Environment  {
         this.root.elementValue.style["fillColor"] = this.defaults["fill"]
  
         this.stack.push(this.root)
+        this.stackMetaIndex = -1
     }
     push(i:RuntimeNode | null, node: treeNode){
         if(i != null){
@@ -35,44 +42,19 @@ class Environment  {
             console.warn("[x pushed null]")
         }
         let lineNum = node.sourceInterval.getLineAndColumn().lineNum
-        if(this.lineStackInfo[lineNum]){
-            this.lineStackInfo[lineNum].push("|")
-        }else{
-            for(let ln = lineNum;ln>0;ln--){
-                let prev = this.lineStackInfo[ln];
-                if(prev){
-                    this.lineStackInfo[lineNum] = [...prev]
-                    this.lineStackInfo[lineNum].push("|")
-                    return;
-                }
-            }
-            this.lineStackInfo[lineNum] = ["|"]
-        }
+        this.stackMetaIndex++
+        this.stackMetaItems.push({start: lineNum, end: undefined})
+        console.log("push",this.stackMetaIndex, this.stackMetaItems.length)
     }
     pop(node:treeNode):RuntimeNode{
         let x= this.stack.pop();
         let lineNum = node.sourceInterval.getLineAndColumn().lineNum
-        //dumb gutter calculation things:
-        if(this.lineStackInfo[lineNum]){
-            this.lineStackInfo[lineNum].pop()
-        }else{
-            let set = false;
-            for(let ln = lineNum;ln>0;ln--){
-                let prev = this.lineStackInfo[ln];
-                if(prev){
-                    this.lineStackInfo[lineNum] = [...prev]
-                    if(this.lineStackInfo[lineNum].length > 0){
-                        this.lineStackInfo[lineNum].pop()
-                        set=true;
-                        break
-                    }
-                }
-            }
-            if(!set){
-                console.log("pop nothing?");
-                this.lineStackInfo = []
-            }
-        }
+        //dumb gutter calculation things
+        this.stackMetaItems[this.stackMetaIndex].end = lineNum
+        this.stackMetaIndex--
+
+
+        console.log("pop",this.stackMetaIndex, this.stackMetaItems.length)
 
         //actual work:
         if(x){
@@ -200,4 +182,4 @@ class Environment  {
         return null;
     }
 }
-export {Environment}
+export {Environment, StackMetaItem}
