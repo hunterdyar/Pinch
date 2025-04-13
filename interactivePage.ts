@@ -1,13 +1,12 @@
 import { basicSetup } from "codemirror";
-import {EditorState, StateEffect, StateField} from "@codemirror/state"
-import {Decoration, DecorationSet, gutter, GutterMarker} from "@codemirror/view"
+import {EditorState, StateField} from "@codemirror/state"
+import {gutter, GutterMarker} from "@codemirror/view"
 import {EditorView, keymap, ViewPlugin, type EditorViewConfig} from "@codemirror/view"
 import {defaultKeymap, indentWithTab} from "@codemirror/commands"
 import { linter, lintGutter, type Diagnostic } from "@codemirror/lint";
 import { CreatePinchDrawing } from "./pinch/parser";
 import {GetSVGFromCurrentPaperContext } from "./pinch/compiler"
-import { Environment, StackMetaItem } from "./pinch/environment";
-import { env } from "bun";
+import { Environment } from "./pinch/environment";
 
 const inputContainer = document.getElementById("inputContainer") as HTMLDivElement
 const output = document.getElementById("outputCanvas") as HTMLCanvasElement
@@ -55,16 +54,6 @@ const drawSVGOnChangePlugin = ViewPlugin.fromClass(class {
       if (update.docChanged){
         draw(update.state.doc)
         localStorage.setItem(localStorageKey,update.state.doc)
-
-        //CodeMirror plugin crashed: Error: Calls to EditorView.update are not allowed while an update is in progress
-        
-        //when the fuck are we supposed to update things?
-
-        // environment.stackMetaItems.forEach(x=>{
-        //   view.dispatch({
-        //     effects: addStackMetaItem.of({from:x.start, to: ((x!=undefined) ? x.end : 0)})
-        //     })
-        // })
       }
     }
     //@ts-ignore
@@ -131,10 +120,7 @@ class StackGutterMarker extends GutterMarker {
           this.innerItem.appendChild(d); 
       }
     }
-    //this.innerItem.innerText = this.val.toString()
-
   }
-
 
   toDOM() {
     return this.innerItem.cloneNode(true)
@@ -229,7 +215,6 @@ function reconfigureCanvas(){
 
 
 function draw(code:string){
-   // let text = inputBox.value
    try {
         performance.mark("pinch-start");
         environment = CreatePinchDrawing(output, code);
