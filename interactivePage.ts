@@ -106,6 +106,13 @@ const stackViewGutter = gutter({
         let stackdec = []
         for(let i = 0;i<environment.stackMetaItems.length;i++){
           const sm = environment.stackMetaItems[i]
+
+          if(sm?.end===undefined){
+            let end = view.state.doc.lineAt(view.state.doc.length).number
+            //plus 1 so we don't draw end-caps.
+            environment.stackMetaItems[i].end = end+1
+          }
+
           if(!sm){continue}
           if(num === sm.start && num === sm.end){
             stackdec.push("o")
@@ -119,10 +126,6 @@ const stackViewGutter = gutter({
                 }else if(num == sm.end){
                   stackdec.push("/")
                 }
-              }else{
-                //sm.end is undefined
-                stackdec.push("?")
-
               }
             }
           }
