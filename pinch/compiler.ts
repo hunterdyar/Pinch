@@ -214,12 +214,17 @@ function compileFlowStatement(node: treeNode, env: Environment){
             }
 
             env.pushFrame(node)
+            env.addToStackMeta = true
             for(let i = start;i<end;i+=step){
                 env.setLocal(label,CreateNumberNode(i),node);
                 body.forEach(s=>{
                     compile(s,env)
                 })
+                if(env.addToStackMeta){
+                    env.addToStackMeta = false;
+                }
             }
+            env.addToStackMeta = true
             env.popFrame(node);
             break;
         case "ifz":
@@ -703,14 +708,12 @@ function tryRunDefinitionLookup(node: treeNode, env:Environment):boolean{
                 env.setLocal(id, compile(node.children[i],env),node)
             }
         }
-        RuntimeNode
         //run body
         proc.statements.forEach(x=>{
             compile(x,env);
         });
 
         env.popFrame(node);
-
         return true
     }
     return false

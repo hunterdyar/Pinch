@@ -17,6 +17,7 @@ class Environment  {
     frames: Dict<RuntimeNode>[] = [] 
     stackMetaItems: StackMetaItem[] = []
     stackMetaIndices: number[] = []
+    addToStackMeta: boolean = true
     maxFrameCount = 2048
     defaults: Dict<string> = {
         "stroke": "black",
@@ -42,24 +43,33 @@ class Environment  {
         }else{
             console.warn("[x pushed null]")
         }
-        let lineNum = node.sourceInterval.getLineAndColumn().lineNum
-        let x = this.stackMetaItems.push({start: lineNum, end: undefined})
-        this.stackMetaIndices.push(x-1)
+        if(!node.hasPushed){
+            let lineNum = node.sourceInterval.getLineAndColumn().lineNum
+            let x = this.stackMetaItems.push({start: lineNum, end: undefined})
+            this.stackMetaIndices.push(x-1)
+            node.hasPushed = true
+        }else{
+            console.log("ignoring push")
+        }
     }
     pop(node:treeNode):RuntimeNode{
         if(this.stack.length == 1){
             throw new PEvalError("EmptyStack","Nothing to pop!",node)
         }
         let x= this.stack.pop();
-        let lineNum = node.sourceInterval.getLineAndColumn().lineNum
-        //dumb gutter calculation things
-        let index = this.stackMetaIndices.pop();
-        if(index != undefined){
-            let top = this.stackMetaItems[index]
-            if(top){
-                top.end = lineNum
+
+        if(!node.hasPopped){
+            let lineNum = node.sourceInterval.getLineAndColumn().lineNum
+            //dumb gutter calculation things
+            let index = this.stackMetaIndices.pop();
+            if(index != undefined){
+                let top = this.stackMetaItems[index]
+                if(top){
+                    top.end = lineNum
+                }
             }
-        }
+            node.hasPopped = true
+         }
 
         //actual work:
         if(x){
