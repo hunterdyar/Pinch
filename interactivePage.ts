@@ -107,7 +107,7 @@ const stackViewGutter = gutter({
         for(let i = 0;i<environment.stackMetaItems.length;i++){
           const sm = environment.stackMetaItems[i]
 
-          if(sm?.end===undefined){
+          if(sm && sm.end===undefined){
             let end = view.state.doc.lineAt(view.state.doc.length).number
             //plus 1 so we don't draw end-caps.
             environment.stackMetaItems[i].end = end+1
