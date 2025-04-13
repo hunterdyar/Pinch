@@ -3,7 +3,7 @@ import { Environment } from "./environment";
 import { NodeType, treeNode, RuntimeNode, RuntimeElementType, CreateElementNode,CreateGroupNode, CreateNumberNode,CreateStringNode,RuntimeType } from "./ast";
 import paper from "paper";
 import { PEvalError } from "./pinchError";
-import { Point } from "paper/dist/paper-core";
+
 
 function compileAndRun(canvas: HTMLCanvasElement, root: treeNode): Environment{
 

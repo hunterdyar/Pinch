@@ -1,10 +1,6 @@
-import { RuntimeNode, Procedure, CreateGroupNode, CreateProcedureNode, treeNode,  } from "./ast"
+import { RuntimeNode, Procedure, CreateGroupNode, CreateProcedureNode, treeNode, RuntimeElementType,  } from "./ast"
 import { PEvalError } from "./pinchError"
 
-type StackOp={
-    pos: number
-    type: string
-}
 class Environment  {
     width: number = 256
     height: number = 256
@@ -12,9 +8,7 @@ class Environment  {
     root: RuntimeNode
     stack: RuntimeNode[] = []
     frames: Dict<RuntimeNode>[] = [] 
-    stackInfo: StackOp[] = []
-    stackSets: Dict<number> = {}
-
+    lineStackInfo: string[][] = []
     maxFrameCount = 2048
     defaults: Dict<string> = {
         "stroke": "black",
@@ -40,12 +34,47 @@ class Environment  {
         }else{
             console.warn("[x pushed null]")
         }
-        this.stackInfo.push({pos: node.sourceInterval.startIdx, type: ">"})
+        let lineNum = node.sourceInterval.getLineAndColumn().lineNum
+        if(this.lineStackInfo[lineNum]){
+            this.lineStackInfo[lineNum].push("|")
+        }else{
+            for(let ln = lineNum;ln>0;ln--){
+                let prev = this.lineStackInfo[ln];
+                if(prev){
+                    this.lineStackInfo[lineNum] = [...prev]
+                    this.lineStackInfo[lineNum].push("|")
+                    return;
+                }
+            }
+            this.lineStackInfo[lineNum] = ["|"]
+        }
     }
     pop(node:treeNode):RuntimeNode{
         let x= this.stack.pop();
-        //multiple pops?
-        this.stackInfo.push({pos: node.sourceInterval.startIdx, type: "."})
+        let lineNum = node.sourceInterval.getLineAndColumn().lineNum
+        //dumb gutter calculation things:
+        if(this.lineStackInfo[lineNum]){
+            this.lineStackInfo[lineNum].pop()
+        }else{
+            let set = false;
+            for(let ln = lineNum;ln>0;ln--){
+                let prev = this.lineStackInfo[ln];
+                if(prev){
+                    this.lineStackInfo[lineNum] = [...prev]
+                    if(this.lineStackInfo[lineNum].length > 0){
+                        this.lineStackInfo[lineNum].pop()
+                        set=true;
+                        break
+                    }
+                }
+            }
+            if(!set){
+                console.log("pop nothing?");
+                this.lineStackInfo = []
+            }
+        }
+
+        //actual work:
         if(x){
             return x
         }else{
@@ -169,18 +198,6 @@ class Environment  {
             }
         }
         return null;
-    }
-    getStackInfoAtPoint(docPoint: number):number{
-        let s = 0;
-        this.stackInfo.forEach(op=>{
-            if(op.pos <= docPoint){
-                switch (op.type){
-                    case ">": s++; break;
-                    case ".": s--; break;
-                }
-            }
-        });
-        return s;
     }
 }
 export {Environment}

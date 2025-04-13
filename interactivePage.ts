@@ -7,6 +7,7 @@ import { linter, lintGutter, type Diagnostic } from "@codemirror/lint";
 import { CreatePinchDrawing } from "./pinch/parser";
 import {GetSVGFromCurrentPaperContext } from "./pinch/compiler"
 import { Environment } from "./pinch/environment";
+import { env } from "bun";
 
 const inputContainer = document.getElementById("inputContainer") as HTMLDivElement
 const output = document.getElementById("outputCanvas") as HTMLCanvasElement
@@ -73,51 +74,62 @@ let updateEnvironment = StateEffect<Environment>.define({
 
 
 class StackGutterMarker  extends GutterMarker {
-  val: number = 0
-  constructor(val: number){
+  val: string = ""
+  constructor(vals: any[]){
     super()
-    this.val = val
+
+    this.val = ""
+    for (let i = 0; i < vals.length; i++) {
+      const element = vals[i];
+      this.val+=element.toString();
+    }
   }
 
   toDOM() {
-    let t = ""
-    for(let i = 0;i<this.val;i++) t+="|"
-    
-    return document.createTextNode(t.toString()) }
+   
+    return document.createTextNode(this.val.toString()) }
 }
-const gutterMarkers: Dict<StackGutterMarker> ={
-  "0": new StackGutterMarker(0),
-  "1": new StackGutterMarker(1),
-  "2": new StackGutterMarker(2),
-  "3": new StackGutterMarker(3),
-  "4": new StackGutterMarker(4),
-  "5": new StackGutterMarker(5),
-}
+const gutterMarkers: Dict<StackGutterMarker> = {}
 
 const stackViewGutter = gutter({
   lineMarker(view, line){
-      let num = line.to
+      let num = view.state.doc.lineAt(line.from).number
+
       if(environment){
         //this is slow, silly, stupid, and feels bad? doc points instead of line numbers make sense but...
-        let stackdec = environment.getStackInfoAtPoint(num)
+        let stackdec = environment.lineStackInfo[num]
         if(stackdec){
-          if(stackdec in gutterMarkers){
-            let o = gutterMarkers[stackdec]
-            if(o){
-              return o;
+          return getGutterMarker(stackdec)
+        }else{
+          for(let i = num-1;i>=0;i--){
+            let stackDecSearch = environment.lineStackInfo[i]
+            if(stackDecSearch){
+              environment.lineStackInfo[num] = stackDecSearch //speed up future searches.
+              return getGutterMarker(stackDecSearch)
             }
-          }else{
-            let m = new StackGutterMarker(stackdec)
-            gutterMarkers[stackdec] = m;
-            return m;
           }
         }
       }
       return null
   },
-  initialSpacer: () => new StackGutterMarker(0)
+  initialSpacer: () => new StackGutterMarker([])
 })
 
+function getGutterMarker(dec: string[]) : StackGutterMarker{
+  let stack = dec.join("");
+  if(stack in gutterMarkers){
+    let o = gutterMarkers[stack]
+    if(o){
+      return o;
+    }
+  }else{
+    let m = new StackGutterMarker(dec)
+    gutterMarkers[stack] = m;
+    return m;
+  }
+  //
+  return new StackGutterMarker([])
+}
 
 let state = EditorState.create({
     doc: starting,
