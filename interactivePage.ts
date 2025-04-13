@@ -94,37 +94,34 @@ class StackGutterMarker extends GutterMarker {
           let box = document.createElement("span")
           box.classList.add("stackBlockGutterItem")
           //@ts-ignore
-          box.style.backgroundColor = blockColors[i%blockColors.length]
+          box.innerHTML ='<svg  xmlns="http://www.w3.org/2000/svg"  preserveAspectRatio="none" width="100%"  height="100%"  viewBox="0 0 10 10"  fill="'+blockColors[i%blockColors.length]+'"><path stroke="none" d="m0,0 v11 h10 v-11 z"/></svg>';
           box.style.display = "inline-block"
-          box.innerText = " "
           this.innerItem.appendChild(box);
           break;
           case "\\":
             let top = document.createElement("span")
             top.classList.add("stackBlockGutterItem")
             //@ts-ignore
-            top.style.backgroundColor = blockColors[i%blockColors.length]
+            top.innerHTML ='<svg  xmlns="http://www.w3.org/2000/svg"  preserveAspectRatio="none" width="100%"  height="100%"  viewBox="0 0 10 10"  fill="'+blockColors[i%blockColors.length]+'"><path stroke="none" d="m0,0 v11 h11 z"/></svg>';
+            //top.style.backgroundColor = blockColors[i%blockColors.length]
             top.style.display = "inline-block"
-            top.innerText = " "
             this.innerItem.appendChild(top);
             break;
           case "/":
             let bot = document.createElement("span")
             bot.classList.add("stackBlockGutterItem")
             //@ts-ignore
-            bot.style.backgroundColor = blockColors[i%blockColors.length]
+            bot.innerHTML ='<svg  xmlns="http://www.w3.org/2000/svg"  preserveAspectRatio="none" width="100%"  height="100%"  viewBox="0 0 10 10"  fill="'+blockColors[i%blockColors.length]+'"><path d="m0,0 h10 L0,10 z"/></svg>';
+            //top.style.backgroundColor = blockColors[i%blockColors.length]
             bot.style.display = "inline-block"
-            bot.innerText = " "
             this.innerItem.appendChild(bot);
             break;
           case "o":
             let sir = document.createElement("span")
             sir.classList.add("stackBlockGutterItem")
             //@ts-ignore
-            sir.style.backgroundColor = blockColors[i%blockColors.length]
+            sir.innerHTML ='<svg  xmlns="http://www.w3.org/2000/svg"  preserveAspectRatio="none" width="100%"  height="100%"  viewBox="0 0 10 10"  fill="'+blockColors[i%blockColors.length]+'"><path stroke="none" d="m0,0 L10,5 L0,10 z"/></svg>';
             sir.style.display = "inline-block"
-            sir.innerText = " "
-
             this.innerItem.appendChild(sir);
             break;
         default:
