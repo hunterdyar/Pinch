@@ -14,7 +14,7 @@ class Environment  {
     stack: RuntimeNode[] = []
     frames: Dict<RuntimeNode>[] = [] 
     stackMetaItems: StackMetaItem[] = []
-    stackMetaIndex: number = 0
+    stackMetaIndices: number[] = []
     maxFrameCount = 2048
     defaults: Dict<string> = {
         "stroke": "black",
@@ -32,7 +32,6 @@ class Environment  {
         this.root.elementValue.style["fillColor"] = this.defaults["fill"]
  
         this.stack.push(this.root)
-        this.stackMetaIndex = -1
     }
     push(i:RuntimeNode | null, node: treeNode){
         if(i != null){
@@ -42,25 +41,27 @@ class Environment  {
             console.warn("[x pushed null]")
         }
         let lineNum = node.sourceInterval.getLineAndColumn().lineNum
-        this.stackMetaIndex++
-        this.stackMetaItems.push({start: lineNum, end: undefined})
-        console.log("push",this.stackMetaIndex, this.stackMetaItems.length)
+        let x = this.stackMetaItems.push({start: lineNum, end: undefined})
+        this.stackMetaIndices.push(x-1)
     }
     pop(node:treeNode):RuntimeNode{
         let x= this.stack.pop();
         let lineNum = node.sourceInterval.getLineAndColumn().lineNum
         //dumb gutter calculation things
-        this.stackMetaItems[this.stackMetaIndex].end = lineNum
-        this.stackMetaIndex--
-
-
-        console.log("pop",this.stackMetaIndex, this.stackMetaItems.length)
+        let index = this.stackMetaIndices.pop();
+        if(index){
+            let top = this.stackMetaItems[index]
+            if(top){
+                this.stackMetaItems[index].end = lineNum
+            }
+        }
 
         //actual work:
         if(x){
             return x
         }else{
-            console.log("popped empty stack!",this.stack)
+            //console.log("popped empty stack!",this.stack)
+            throw new PEvalError("EmptyStack","Empty Stack!",node)
             return this.root
         }
     }
