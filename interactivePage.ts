@@ -76,26 +76,76 @@ const drawSVGOnChangePlugin = ViewPlugin.fromClass(class {
 const pinchLinter = linter(view => {
   return diagnostics
 })
-
-class StackGutterMarker  extends GutterMarker {
+const blockColors = ["#5E7432","#FFCB67","#CE6039","#95C55F","#A04615","#F78059"]
+const gutterBlockWidth = "4px";
+class StackGutterMarker extends GutterMarker {
   val: string = ""
-  constructor(vals: any[]){
+  innerItem: HTMLElement
+  
+  constructor(val: string){
     super()
+    this.val = val;
+    this.innerItem = document.createElement("span");    
+    this.innerItem.style.position = "relative";
+    for (let i = 0; i < val.length; i++) {
+      const element = val.charAt(i)
+      switch(element){
+        case "|":
+          let box = document.createElement("span")
+          box.classList.add("stackBlockGutterItem")
+          //@ts-ignore
+          box.style.backgroundColor = blockColors[i%blockColors.length]
+          box.style.display = "inline-block"
+          box.innerText = " "
+          this.innerItem.appendChild(box);
+          break;
+          case "\\":
+            let top = document.createElement("span")
+            top.classList.add("stackBlockGutterItem")
+            //@ts-ignore
+            top.style.backgroundColor = blockColors[i%blockColors.length]
+            top.style.display = "inline-block"
+            top.innerText = " "
+            this.innerItem.appendChild(top);
+            break;
+          case "/":
+            let bot = document.createElement("span")
+            bot.classList.add("stackBlockGutterItem")
+            //@ts-ignore
+            bot.style.backgroundColor = blockColors[i%blockColors.length]
+            bot.style.display = "inline-block"
+            bot.innerText = " "
+            this.innerItem.appendChild(bot);
+            break;
+          case "o":
+            let sir = document.createElement("span")
+            sir.classList.add("stackBlockGutterItem")
+            //@ts-ignore
+            sir.style.backgroundColor = blockColors[i%blockColors.length]
+            sir.style.display = "inline-block"
+            sir.innerText = " "
 
-    this.val = ""
-    for (let i = 0; i < vals.length; i++) {
-      const element = vals[i];
-      this.val+=element.toString();
+            this.innerItem.appendChild(sir);
+            break;
+        default:
+          let d = document.createElement("span")
+          d.style.display = "inline-block"
+          d.innerText = element;
+          this.innerItem.appendChild(d); 
+      }
     }
+    //this.innerItem.innerText = this.val.toString()
+
   }
 
-  toDOM() {
-   
-    return document.createTextNode(this.val.toString()) }
 
+  toDOM() {
+    return this.innerItem.cloneNode(true)
+  }
 }
+
 const gutterMarkers: Dict<StackGutterMarker> = {}
-const emptyStackGutterMarker = new StackGutterMarker([])
+const emptyStackGutterMarker = new StackGutterMarker("")
 const stackViewGutter = gutter({
   lineMarker(view, line){
       //Right now we are drawing characters for every line.
@@ -103,34 +153,35 @@ const stackViewGutter = gutter({
 
       if(environment){
         //this is slow, silly, stupid, and feels bad? doc points instead of line numbers make sense but...
-        let stackdec = []
+        let stackdec = ""
         for(let i = 0;i<environment.stackMetaItems.length;i++){
           const sm = environment.stackMetaItems[i]
+          if(!sm){continue}
 
-          if(sm && sm.end===undefined){
+          //if it's unclosed.
+          if(sm.end===undefined){
             let end = view.state.doc.lineAt(view.state.doc.length).number
             //plus 1 so we don't draw end-caps.
-            environment.stackMetaItems[i].end = end+1
+            sm.end = end+1
           }
 
-          if(!sm){continue}
           if(num === sm.start && num === sm.end){
-            stackdec.push("o")
+            stackdec+="o"
           }else{
             if(num == sm.start){
-              stackdec.push("\\")
+              stackdec +="\\"
             }else if(num > sm.start){
               if(sm.end != undefined){
                 if(num < sm.end){
-                  stackdec.push("|")
+                  stackdec +="|"
                 }else if(num == sm.end){
-                  stackdec.push("/")
+                  stackdec += "/"
                 }
               }
             }
           }
         }//end loop
-        if(stackdec){
+        if(stackdec != undefined){
           return getGutterMarker(stackdec)
         }
       }
@@ -139,20 +190,20 @@ const stackViewGutter = gutter({
   initialSpacer: () => emptyStackGutterMarker
 })
 
-function getGutterMarker(dec: string[]) : StackGutterMarker{
-  let stack = dec.join("");
+function getGutterMarker(dec: string) : StackGutterMarker{
+  let stack = dec
   if(stack in gutterMarkers){
     let o = gutterMarkers[stack]
     if(o){
       return o;
     }
   }else{
-    let m = new StackGutterMarker(dec)
+    let m = new StackGutterMarker(stack)
     gutterMarkers[stack] = m;
     return m;
   }
   //
-  return new StackGutterMarker([])
+  return new StackGutterMarker("")
 }
 
 let state = EditorState.create({

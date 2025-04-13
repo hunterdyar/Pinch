@@ -7,8 +7,10 @@ class StackMetaItem {
 }
 
 class Environment  {
-    width: number = 256
-    height: number = 256
+    //todo: currently a bug where the width and height need to match what the canvas defaults. Currently set in css.
+    //
+    width: number = 200
+    height: number = 200
     active: RuntimeNode | null = null
     root: RuntimeNode
     stack: RuntimeNode[] = []
@@ -45,14 +47,17 @@ class Environment  {
         this.stackMetaIndices.push(x-1)
     }
     pop(node:treeNode):RuntimeNode{
+        if(this.stack.length == 1){
+            throw new PEvalError("EmptyStack","Nothing to pop!",node)
+        }
         let x= this.stack.pop();
         let lineNum = node.sourceInterval.getLineAndColumn().lineNum
         //dumb gutter calculation things
         let index = this.stackMetaIndices.pop();
-        if(index){
+        if(index != undefined){
             let top = this.stackMetaItems[index]
             if(top){
-                this.stackMetaItems[index].end = lineNum
+                top.end = lineNum
             }
         }
 
@@ -62,7 +67,6 @@ class Environment  {
         }else{
             //console.log("popped empty stack!",this.stack)
             throw new PEvalError("EmptyStack","Empty Stack!",node)
-            return this.root
         }
     }
     peek(node:treeNode):RuntimeNode{

@@ -308,7 +308,7 @@ function compileFlowStatement(node: treeNode, env: Environment){
             body.forEach(s=>{
                 compile(s,env)
             })
-            env.pop();
+            env.pop(node);
         break;
         default:
             throw new PEvalError("UnknownID","Unknown control flow statement "+node.id, node)
