@@ -1,6 +1,6 @@
 
 import { Environment } from "./environment";
-import { NodeType, treeNode, RuntimeNode, RuntimeElementType, CreateElementNode,CreateGroupNode, CreateNumberNode,CreateStringNode,RuntimeType } from "./ast";
+import { NodeType, treeNode, RuntimeNode, RuntimeElementType, CreateElementNode,CreateGroupNode, CreateNumberNode,CreateStringNode,RuntimeType, RuntimeElement } from "./ast";
 import paper from "paper";
 import { PEvalError } from "./pinchError";
 
@@ -533,67 +533,18 @@ function compileTransformation(node:treeNode, env: Environment){
             break;
         case "pivot":
             if(node.children.length === 1){
-                //todo: refactor to "compile to boundsPosition" function. as with colors, etc; and also do variable lookups
-                let piv = node.children[0].id
-                switch(piv){
-                    case "center":
-                    case "c":
-                    case "middlemiddle":
-                    case "mm":
-                        context.item.pivot = context.item.bounds.center;
-                        break
-                    case "topleft":
-                    case "tl":
-                        context.item.pivot = context.item.bounds.topLeft;
-                        break
-                    case "topmiddle":
-                    case "tm":
-                    case "topcenter":
-                    case "tc":
-                        context.item.pivot = context.item.bounds.topCenter;
-                        break
-                    case "topright":
-                    case "tr":
-                        context.item.pivot = context.item.bounds.topRight;
-                        break
-                    case "middleleft":
-                    case "ml":
-                    case "centerleft":
-                    case "cl":
-                        context.item.pivot = context.item.bounds.leftCenter;
-                        break
-                    case "middleright":
-                    case "mr":
-                    case "centerright":
-                    case "cr":
-                        context.item.pivot = context.item.bounds.rightCenter;
-                        break
-                    case "bottomleft":
-                    case "bl":
-                        context.item.pivot = context.item.bounds.bottomLeft;
-                        break
-                    case "bottommiddle":
-                    case "bm":
-                    case "bottomcenter":
-                    case "bc":
-                        context.item.pivot = context.item.bounds.bottomCenter;
-                        break
-                    case "bottomright":
-                    case "br":
-                        context.item.pivot = context.item.bounds.bottomRight;
-                        break
-                    default:
-                        throw new PEvalError("BadArgs", "Pivot: Invalid arguments. Want keyword (e.g. 'topleft' 'rightmiddle' 'center') or 2 args (%x %y (0-1 % of bounds))",node);
-                }
+                let p = compilePivotPointFromSingleNode(node.children[0],context, env)
+                context.item.pivot = p
             }else if(node.children.length === 2){
                 checkChildrenLengthForArgument(node,2)
                 let pivx = compile(node.children[0],env).getNumberValue()
                 let pivy = compile(node.children[1],env).getNumberValue()
+                //lerp functions
                 pivx =  context.item.bounds.left * (1 - pivx) + context.item.bounds.right * pivx;
                 pivy =  context.item.bounds.top * (1 - pivy) + context.item.bounds.bottom * pivy;
                 context.item.pivot = (new paper.Point(pivx,pivy))
             }else{
-                throw new PEvalError("BadArgs", "Pivot: Invalid arguments. Want keyword (e.g. 'topleft' 'rightmiddle' 'center') or 2 args (%x %y)",node);
+                throw new PEvalError("BadArgs", "Pivot: Invalid arguments. Want 1 (keyword, e.g. 'topleft' 'rightmiddle' 'center') or 2 args (%x %y)",node);
             }
         break;
         case "stroke-width":
@@ -819,7 +770,7 @@ function compileBlendmodeFromSingleNode(node:treeNode, env:Environment):string{
     let s: string = node.id
     if(node.id == "")
     {
-        throw new PEvalError("BadID","Can't get , bad input",node)
+        throw new PEvalError("BadID","bad input for blendmode (empty)",node)
     }
 
     if(node.type == NodeType.Identifier){
@@ -832,12 +783,71 @@ function compileBlendmodeFromSingleNode(node:treeNode, env:Environment):string{
     // else if(node.type == NodeType.String){
     //    s = node.id
     // }
-
-    if(validBlendModes.includes(s.toLowerCase())){
+    s = s.toLowerCase()
+    if(validBlendModes.includes(s)){
        return s
      }
     
     throw new PEvalError("BadType",s +" is not a valid blendmode.", node)   
+}
+
+function compilePivotPointFromSingleNode(node:treeNode, context: RuntimeElement, env:Environment):paper.Point{
+    let s: string = node.id
+    if(node.id == "")
+    {
+        throw new PEvalError("BadID","bad input for pivot point (empty)",node)
+    }
+
+    if(node.type == NodeType.Identifier){
+        console.log("is identifier a node?")
+        let local = env.getLocalOrNull(node.id);
+        if(local){
+            s = local.getStringValue() 
+        }
+    }
+
+    s = s.toLowerCase()
+    switch(s){
+        case "center":
+        case "c":
+        case "middlemiddle":
+        case "mm":
+            return context.item.bounds.center;
+        case "topleft":
+        case "tl":
+            return context.item.bounds.topLeft;
+        case "topmiddle":
+        case "tm":
+        case "topcenter":
+        case "tc":
+            return context.item.bounds.topCenter;
+        case "topright":
+        case "tr":
+            return context.item.bounds.topRight;
+        case "middleleft":
+        case "ml":
+        case "centerleft":
+        case "cl":
+            return context.item.bounds.leftCenter;
+        case "middleright":
+        case "mr":
+        case "centerright":
+        case "cr":
+            return context.item.bounds.rightCenter;
+        case "bottomleft":
+        case "bl":
+            return context.item.bounds.bottomLeft;
+        case "bottommiddle":
+        case "bm":
+        case "bottomcenter":
+        case "bc":
+            return context.item.bounds.bottomCenter;
+        case "bottomright":
+        case "br":
+            return context.item.bounds.bottomRight;
+        default:
+            throw new PEvalError("BadType","'"+s +"' is not a valid bounds position.", node)
+    }
 }
 
 
