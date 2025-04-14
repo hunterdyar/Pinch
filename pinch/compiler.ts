@@ -428,10 +428,12 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
             env.active = CreateElementNode(path);
         break;
         case "text":
+            throw new PEvalError("Unsupported","Text is not yet supported! Working on it!", node)
+
             if(node.children.length == 1){
                 let content = compile(node.children[0],env)
                 let textitem = new paper.PointText(paper.view.center);
-               // textitem.content = content;
+                //textitem.content = content;
                 //env.active = CreateElementNode(textitem);
 
             }else if(node.children.length == 3){
@@ -440,7 +442,7 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
                 let content = compile(node.children[2],env)
                 let a = new paper.Point(x,y)
                 let textitem = new paper.PointText(a);
-              //  textitem.content = content;
+                //textitem.content = content;
                 //env.active = CreateElementNode(textitem);
             }
             else{
@@ -453,7 +455,6 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
                 throw new PEvalError("BadID","Unknown standalone object statement: "+node.id, node);
             }
         }
-    //
 }
 
 function compileTransformation(node:treeNode, env: Environment){
@@ -523,6 +524,78 @@ function compileTransformation(node:treeNode, env: Environment){
                     throw new PEvalError("BadContext", "Rotations on groups not supported (yet).",node);
                 }
             break;
+        case "pivotg":
+        case "pivot-global":
+                checkChildrenLengthForArgument(node,2)
+                let x = compile(node.children[0],env).getNumberValue()
+                let y = compile(node.children[1],env).getNumberValue()
+                context.item.pivot = new paper.Point(x,y)
+            break;
+        case "pivot":
+            if(node.children.length === 1){
+                //todo: refactor to "compile to boundsPosition" function. as with colors, etc; and also do variable lookups
+                let piv = node.children[0].id
+                switch(piv){
+                    case "center":
+                    case "c":
+                    case "middlemiddle":
+                    case "mm":
+                        context.item.pivot = context.item.bounds.center;
+                        break
+                    case "topleft":
+                    case "tl":
+                        context.item.pivot = context.item.bounds.topLeft;
+                        break
+                    case "topmiddle":
+                    case "tm":
+                    case "topcenter":
+                    case "tc":
+                        context.item.pivot = context.item.bounds.topCenter;
+                        break
+                    case "topright":
+                    case "tr":
+                        context.item.pivot = context.item.bounds.topRight;
+                        break
+                    case "middleleft":
+                    case "ml":
+                    case "centerleft":
+                    case "cl":
+                        context.item.pivot = context.item.bounds.leftCenter;
+                        break
+                    case "middleright":
+                    case "mr":
+                    case "centerright":
+                    case "cr":
+                        context.item.pivot = context.item.bounds.rightCenter;
+                        break
+                    case "bottomleft":
+                    case "bl":
+                        context.item.pivot = context.item.bounds.bottomLeft;
+                        break
+                    case "bottommiddle":
+                    case "bm":
+                    case "bottomcenter":
+                    case "bc":
+                        context.item.pivot = context.item.bounds.bottomCenter;
+                        break
+                    case "bottomright":
+                    case "br":
+                        context.item.pivot = context.item.bounds.bottomRight;
+                        break
+                    default:
+                        throw new PEvalError("BadArgs", "Pivot: Invalid arguments. Want keyword (e.g. 'topleft' 'rightmiddle' 'center') or 2 args (%x %y (0-1 % of bounds))",node);
+                }
+            }else if(node.children.length === 2){
+                checkChildrenLengthForArgument(node,2)
+                let pivx = compile(node.children[0],env).getNumberValue()
+                let pivy = compile(node.children[1],env).getNumberValue()
+                pivx =  context.item.bounds.left * (1 - pivx) + context.item.bounds.right * pivx;
+                pivy =  context.item.bounds.top * (1 - pivy) + context.item.bounds.bottom * pivy;
+                context.item.pivot = (new paper.Point(pivx,pivy))
+            }else{
+                throw new PEvalError("BadArgs", "Pivot: Invalid arguments. Want keyword (e.g. 'topleft' 'rightmiddle' 'center') or 2 args (%x %y)",node);
+            }
+        break;
         case "stroke-width":
         case "sw":
             checkChildrenLengthForArgument(node,1)
