@@ -471,15 +471,6 @@ function compileTransformation(node:treeNode, env: Environment){
             checkChildrenLengthForArgument(node,1)
             context.style["fillColor"] = compileColorFromSingleNode(node.children[0],env)
             break
-        // case "radius":
-        // case "r":
-        //     checkChildrenLengthForArgument(node,1)
-        //     let r = parseFloat(compile(node.children[0],env))
-        //     if(context.type == RuntimeElementType.Path){
-        //         let o = (context as RuntimeItem).item
-        //         (context as RuntimeItem).item.path = new paper.Path.Circle({center: o.bounds.center, radius: r})
-        //     }
-        //     break;
         case "x":
             checkChildrenLengthForArgument(node,1)
             context.item.position.x = compile(node.children[0],env).getNumberValue();
@@ -639,7 +630,6 @@ function compileEnvironmentProperty(node: treeNode, env: Environment){
             throw new PEvalError("UnknownID","Unknown Environment Property "+node.id,node);
     }
 }
-
 
 function doBooleanOp(op: string, args: RuntimeNode[], env: Environment, node: treeNode){
     let path: paper.PathItem
@@ -850,12 +840,10 @@ function compilePivotPointFromSingleNode(node:treeNode, context: RuntimeElement,
     }
 }
 
-
 function checkChildrenLengthForArgument(node: treeNode, length: number){
     if(node.children.length != length){
         throw new PEvalError("ArgCount","bad number of arguments for "+node.id+". Expected 1, got "+node.children.length, node)
     }
 }
-
 
 export{ compileAndRun, GetSVGFromCurrentPaperContext}
