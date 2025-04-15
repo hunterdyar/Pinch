@@ -1,5 +1,5 @@
 import { RuntimeNode, Procedure, CreateGroupNode, CreateProcedureNode, treeNode, RuntimeElementType,  } from "./ast"
-import { PEvalError } from "./pinchError"
+import { CreateWarning, PEvalError, PWarn } from "./pinchError"
 
 class StackMetaItem {
     start: number = 0
@@ -24,6 +24,7 @@ class Environment  {
         "fill": "lightgrey",
     }
     definitions: Dict<Procedure> = {} 
+    warnings: PWarn[] = []
 
     constructor(){
         //root runtime group element.
@@ -40,16 +41,16 @@ class Environment  {
         if(i != null){
             let b4 = this.stack.length
             this.stack.push(i)
+
+            if(!node.hasPushed){
+                let lineNum = node.sourceInterval.getLineAndColumn().lineNum
+                let x = this.stackMetaItems.push({start: lineNum, end: undefined})
+                this.stackMetaIndices.push(x-1)
+                node.hasPushed = true
+            }
+
         }else{
-            console.warn("[x pushed null]")
-        }
-        if(!node.hasPushed){
-            let lineNum = node.sourceInterval.getLineAndColumn().lineNum
-            let x = this.stackMetaItems.push({start: lineNum, end: undefined})
-            this.stackMetaIndices.push(x-1)
-            node.hasPushed = true
-        }else{
-            console.log("ignoring push")
+            CreateWarning("PushNull","Tried To Push Nothing. Ignoring.",node,this)
         }
     }
     pop(node:treeNode):RuntimeNode{
@@ -75,21 +76,18 @@ class Environment  {
         if(x){
             return x
         }else{
-            //console.log("popped empty stack!",this.stack)
             throw new PEvalError("EmptyStack","Empty Stack!",node)
         }
     }
     peek(node:treeNode):RuntimeNode{
         if(this.stack.length == 0){
             throw new PEvalError("EmptyStack","Empty Stack!",node)
-            //return this.baseSVG
-        }
+''        }
         
         let x = this.stack[this.stack.length-1]
         if(x){
             return x
         }else{
-            console.log("bad stack, cant peek.",this.stack);
             throw new Error("cannot peek")
         }
     }

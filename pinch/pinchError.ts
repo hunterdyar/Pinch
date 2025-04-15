@@ -1,11 +1,14 @@
 import type { Interval, MatchResult } from "ohm-js";
 import type { treeNode } from "./ast";
+import type { Environment } from "./environment";
 
 class PEvalError implements EvalError{
     name: string;
     message: string;
     stack?: string | undefined;
     cause?: unknown;
+    interval: Interval
+    severity: string = "error"
     from: number;
     to: number;
 
@@ -16,6 +19,7 @@ class PEvalError implements EvalError{
         }else{
             this.message = ""
         }
+        this.interval = node.sourceInterval
         this.from = node.sourceInterval.startIdx
         this.to = node.sourceInterval.endIdx
     }
@@ -25,6 +29,7 @@ class PEvalError implements EvalError{
 class PSyntaxError implements SyntaxError{
     name: string;
     message: string;
+    severity: string = "error";
     stack?: string | undefined;
     cause?: unknown;
     interval: Interval
@@ -46,4 +51,34 @@ class PSyntaxError implements SyntaxError{
     }
 }
 
-export {PEvalError, PSyntaxError}
+function CreateWarning(name: string, message: string | undefined, node: treeNode, env: Environment){
+    if(node.emittedWarnings.includes(name)){
+        return;
+    }
+    env.warnings.push(new PWarn(name,message,node))
+    node.emittedWarnings.push(name)
+}
+
+class PWarn {
+    name: string;
+    message: string;
+    severity: string = "warning"
+    interval: Interval;
+    from: number;
+    to: number;   
+    
+    constructor(name: string, message: string | undefined, node: treeNode){
+        this.name = name
+        if(message){
+            this.message = message
+        }else{
+            this.message = ""
+        }
+        this.interval = node.sourceInterval
+        this.from = node.sourceInterval.startIdx
+        this.to = node.sourceInterval.endIdx
+    }
+
+}
+
+export {PEvalError, PSyntaxError, PWarn,CreateWarning}

@@ -2,7 +2,7 @@
 import { Environment } from "./environment";
 import { NodeType, treeNode, RuntimeNode, RuntimeElementType, CreateElementNode,CreateGroupNode, CreateNumberNode,CreateStringNode,RuntimeType, RuntimeElement } from "./ast";
 import paper from "paper";
-import { PEvalError } from "./pinchError";
+import { CreateWarning, PEvalError, PWarn } from "./pinchError";
 
 
 function compileAndRun(canvas: HTMLCanvasElement, root: treeNode): Environment{
@@ -14,8 +14,6 @@ function compileAndRun(canvas: HTMLCanvasElement, root: treeNode): Environment{
         paper.project = new paper.Project(canvas)
     }
     paper.project.addLayer(new paper.Layer())    
-
-    let c = new paper.Path.Circle(paper.view.center,30)
     
     let environment = new Environment()
 
@@ -32,6 +30,7 @@ function compileAndRun(canvas: HTMLCanvasElement, root: treeNode): Environment{
         if(rt.type == RuntimeType.Element){
             rt.elementValue?.Render();
         }else{
+            //CreateWarning("UnexpectedRuntimeItem","unexpeted item on the stack. Ignoring.",null,environment)
             console.warn("unexpeted item on the stack. Ignoring.",rt);
         }
     });
@@ -59,8 +58,6 @@ function compile(node:treeNode, env: Environment): RuntimeNode{
                 return local
             }
             throw new PEvalError("UnknownID","Unknown symbol '"+node.id+"'.",node)
-            //console.log("unable to get local for "+node.id+". treating as string instead.");
-            //return CreateStringNode(node.id)
         case NodeType.ObjectStatement:
             compileStandaloneObjectStatement(node,env) 
             //append! let empty object statements be equivalent to append.
@@ -211,7 +208,8 @@ function compileFlowStatement(node: treeNode, env: Environment){
             }else if(start < end && step < 0){
                 throw new PEvalError("BadArgs","repeat: step moves away from end.", node)
             }else if(start == end){
-                console.warn("Repeat: Start and end are the same? Nothing will happen.")
+                //todo: how to highlight start and end nodes. We don't track if they are child 1, 2, or 3. pWarn doesn't accept them.
+               CreateWarning("UselessOp","Repeat Block Start and end are the same? Nothing will happen.", node,env)
             }
 
             env.pushFrame(node)
@@ -765,18 +763,19 @@ function compileBlendmodeFromSingleNode(node:treeNode, env:Environment):string{
     }
 
     if(node.type == NodeType.Identifier){
-        console.log("is identifier a node?")
+        
         let local = env.getLocalOrNull(node.id);
         if(local){
             s = local.getStringValue() 
         }
     }
-    // else if(node.type == NodeType.String){
-    //    s = node.id
-    // }
-    s = s.toLowerCase()
-    if(validBlendModes.includes(s)){
-       return s
+    
+    let sl = s.toLowerCase()
+    if(sl != s){
+        CreateWarning("UseLowercase","Identifiers should be all lowercase",node,env)
+    }
+    if(validBlendModes.includes(sl)){
+       return sl
      }
     
     throw new PEvalError("BadType",s +" is not a valid blendmode.", node)   
@@ -790,15 +789,17 @@ function compilePivotPointFromSingleNode(node:treeNode, context: RuntimeElement,
     }
 
     if(node.type == NodeType.Identifier){
-        console.log("is identifier a node?")
         let local = env.getLocalOrNull(node.id);
         if(local){
             s = local.getStringValue() 
         }
     }
 
-    s = s.toLowerCase()
-    switch(s){
+    let sl = s.toLowerCase()
+    if(sl != s){
+        CreateWarning("UseLowercase","PivotPoint symbols should be all lowercase",node,env)
+    }
+    switch(sl){
         case "center":
         case "c":
         case "middlemiddle":

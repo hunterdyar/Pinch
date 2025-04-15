@@ -26,6 +26,7 @@ class treeNode {
     id: string
     children: any[]
     sourceInterval: Interval 
+    emittedWarnings: string[] = []
     hasPushed: boolean = false
     hasPopped: boolean = false
     constructor(ns: NodeType, id: string,childs: any[], interval: Interval)
