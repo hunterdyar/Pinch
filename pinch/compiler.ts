@@ -3,6 +3,7 @@ import { Environment } from "./environment";
 import { NodeType, treeNode, RuntimeNode, RuntimeElementType, CreateElementNode,CreateGroupNode, CreateNumberNode,CreateStringNode,RuntimeType, RuntimeElement } from "./ast";
 import paper from "paper";
 import { CreateWarning, PEvalError, PWarn } from "./pinchError";
+import { env } from "bun";
 
 
 function compileAndRun(canvas: HTMLCanvasElement, root: treeNode): Environment{
@@ -16,15 +17,32 @@ function compileAndRun(canvas: HTMLCanvasElement, root: treeNode): Environment{
     paper.project.addLayer(new paper.Layer())    
     
     let environment = new Environment()
-
+    
     if(root.type != NodeType.Program){
-        throw new PEvalError("RootIsNotProgram","invalid root object.", root)
+        throw new PEvalError("RootIsNotProgram","Invalid root object.", root)
     }
+     
+    paper.project.activeLayer.name = "Content"
+   
     root.children.forEach(child => {
         //@ts-ignore
         compile(child, environment);
     });
     performance.mark("compile-end")
+
+    //background
+    if(environment.background.alpha === undefined || environment.background.alpha > 0){
+        paper.project.activeLayer.name = "Background"
+        var background = new paper.Path.Rectangle(paper.view.bounds);
+        background.sendToBack()
+        background.fillColor = environment.background;
+        // make a new layer for everything else.
+        let newlayer = new paper.Layer()
+        paper.project.addLayer(newlayer)
+        newlayer.activate();
+        newlayer.bringToFront();
+    }
+   
 
     environment.stack.forEach((rt:RuntimeNode)=>{
         if(rt.type == RuntimeType.Element){
@@ -625,6 +643,12 @@ function compileEnvironmentProperty(node: treeNode, env: Environment){
             env.height = h;
             paper.view.viewSize.height = h;
         break;
+        case "background":
+        case "bg":
+            checkChildrenLengthForArgument(node,1)
+            env.background = compileColorFromSingleNode(node.children[0],env)     
+            console.log(env.background)       
+            break;
         default:
             throw new PEvalError("UnknownID","Unknown Environment Property "+node.id,node);
     }

@@ -229,7 +229,6 @@ function draw(code:string){
           diagnostics.push(w)
         });
         }
-        console.log(environment.warnings)
         const parsePerf = performance.measure("pinch-parse","pinch-start","parse-end");
         const compPerf = performance.measure("pinch-compile","parse-end","compile-end");
         const renderPerf = performance.measure("pinch-render","compile-end","pinch-end");

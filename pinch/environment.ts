@@ -1,5 +1,6 @@
 import { RuntimeNode, Procedure, CreateGroupNode, CreateProcedureNode, treeNode, RuntimeElementType,  } from "./ast"
 import { CreateWarning, PEvalError, PWarn } from "./pinchError"
+import paper from "paper";
 
 class StackMetaItem {
     start: number = 0
@@ -11,6 +12,7 @@ class Environment  {
     //
     width: number = 200
     height: number = 200
+    background: paper.Color 
     active: RuntimeNode | null = null
     root: RuntimeNode
     stack: RuntimeNode[] = []
@@ -36,6 +38,7 @@ class Environment  {
         this.root.elementValue.style["fillColor"] = this.defaults["fill"]
  
         this.stack.push(this.root)
+        this.background = new paper.Color(1,1,1,0)
     }
     push(i:RuntimeNode | null, node: treeNode){
         if(i != null){
