@@ -132,14 +132,15 @@ function compile(node:treeNode, env: Environment): RuntimeNode{
             if(node.children.length == 1){
                 //pop the number of dots.
                 for(let pops = 0;pops<node.children[0];pops++){
-                    env.pop(node);
+                    env.active = env.pop(node);
                 }
             }else if(node.children.length == 2){
 
                 let poppedChilds = []
                 //pop the number of dots and shove em into a list for us to use...
                 for(let pops = 0;pops<node.children[0];pops++){
-                    poppedChilds.push(env.pop(node));
+                    env.active = env.pop(node)
+                    poppedChilds.push(env.active);
                 }
                 compilePopStatement(node.children[1],poppedChilds,env);
             }else{
