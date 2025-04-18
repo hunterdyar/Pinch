@@ -29,6 +29,10 @@ s.addOperation("toTree",{
         return new treeNode(NodeType.Transformation, b.sourceString, [b.toTree()], b.source);
     },
     //@ts-ignore
+    TurtleOperation(a,b){
+        return new treeNode(NodeType.Turtle, b.sourceString, [b.toTree()], b.source);
+    },
+    //@ts-ignore
     AppendOperation(a,b){
         return new treeNode(NodeType.Append,b.sourceString, [b.toTree()], b.source)
     },

@@ -67,8 +67,9 @@ bodyDelim = ("\n" | ";")
     pipe = "|"
     doLabel = "@"
     doEnv = "#"
+    doTurtle = "~"
     
-    operator = doPush | doPop | doAlter | pipe | doAppend | endFlow | doLabel | doEnv
+    operator = doPush | doPop | doAlter | pipe | doAppend | endFlow | doLabel | doEnv | doTurtle
     
 	literal = 
     ~operator ident
@@ -89,8 +90,9 @@ bodyDelim = ("\n" | ";")
   ObjectStatement =
   | Transformation
   | AppendOperation
+  | TurtleOperation
   | objectStatement
-  
+
   MetaStatement =
   | PushOperation
   | popOperation
@@ -110,8 +112,12 @@ bodyDelim = ("\n" | ";")
   (ObjectStatement | AppendOperation | popOperation) doPush
   AppendOperation =
   doAppend objectStatement
+
   Transformation
   = pipe objectStatement
+
+  TurtleOperation
+  = doTurtle objectStatement
   
   FlowOperation =
   doFlow objectStatement Statement* endFlow

@@ -1,6 +1,6 @@
 
 import { Environment } from "./environment";
-import { NodeType, treeNode, RuntimeNode, RuntimeElementType, CreateElementNode,CreateGroupNode, CreateNumberNode,CreateStringNode,RuntimeType, RuntimeElement } from "./ast";
+import { NodeType, treeNode, RuntimeNode, RuntimeElementType, CreateElementNode,CreateGroupNode, CreateNumberNode,CreateStringNode,RuntimeType, RuntimeElement, CreateTurtlePathNode } from "./ast";
 import paper from "paper";
 import { CreateWarning, PEvalError, PWarn } from "./pinchError";
 import { env } from "bun";
@@ -103,6 +103,21 @@ function compile(node:treeNode, env: Environment): RuntimeNode{
             }
             
             break;
+        case NodeType.Turtle:
+            let tctx = env.peek(node);
+            if(tctx != null){
+                if(tctx.type == RuntimeType.Procedure){
+                    tctx.procudureValue?.statements.push(node);
+                }else if (tctx.type == RuntimeType.Element){
+                    node.children.forEach(x=>{
+                        compileTurtle(x,env)
+                    });
+                }else{
+                    throw new PEvalError("BadType","Can't apply transformation to "+node.type.toString(),node)
+                }
+            }
+            
+        break;
         case NodeType.Append:
             //add to current object.
             c = env.peek(node);
@@ -466,6 +481,9 @@ function compileStandaloneObjectStatement(node:treeNode, env: Environment){
                 throw new PEvalError("BadArgs","Text: bad number of arguments. Want 1 (text) or 3 (x y text)", node)
             }
             break
+        case "path":
+            env.active = CreateTurtlePathNode();
+        break
         default:
             //def lookup!            
             if(!tryRunDefinitionLookup(node,env)){
@@ -587,6 +605,42 @@ function compileTransformation(node:treeNode, env: Environment){
             break
         default:
             throw new PEvalError("UnknownID","Unknown Transformation "+node.id, node);
+    }
+}
+
+function compileTurtle(node:treeNode, env: Environment){
+    let contextNode = env.peek(node)
+    if(contextNode.type != RuntimeType.Element){
+        throw new PEvalError("BadArgs","Can't compile turtlePath on type "+contextNode.type.toString()+". Groups not yet supported.", node)
+    }
+    let context = contextNode.elementValue;
+    let item = context?.item as paper.PathItem
+    if(context == null || context == undefined){
+        return;
+    }
+    switch(node.id){
+        case "horizontal":
+            checkChildrenLengthForArgument(node,1)
+            let hdis = compile(node.children[0],env).getNumberValue()
+            item.lineBy(new paper.Point(0,hdis))
+            break
+            break;
+        case "vertical":
+            checkChildrenLengthForArgument(node,1)
+            let vdis = compile(node.children[0],env).getNumberValue()
+            item.lineBy(new paper.Point(vdis,0))
+            break
+            break;
+        case "move":
+            //wait, paper doesn't support multiple Paths, so "hopping over" isnt going to work.
+            //we need a CompoundPath to use the items from paperJS, or just to do it ourselves on a path object that operates on an array of segmetns.
+            checkChildrenLengthForArgument(node,2)
+            let movx = compile(node.children[0],env).getNumberValue()
+            let movy = compile(node.children[0],env).getNumberValue()
+            item.moveTo(new paper.Point(movx,movy))
+            break
+            break;
+            
     }
 }
 

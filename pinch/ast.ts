@@ -1,6 +1,7 @@
 import type { Interval } from "ohm-js";
 import paper from "paper";
 import { PEvalError } from "./pinchError";
+import { PathItem } from "paper/dist/paper-core";
 
 enum NodeType {
     Program,
@@ -16,6 +17,7 @@ enum NodeType {
     Flow,
     BodyStatement,
     Transformation,
+    Turtle,
     Procedure,
     Block,
     EnvironmentProperty
@@ -78,6 +80,7 @@ class RuntimeNode {
                 throw new Error("Can't get number value for runtime node of type "+NodeType[this.type])
         }
     }
+
     
     appendChildElement(element: RuntimeNode | null, node:treeNode){
         if(element == null){
@@ -134,6 +137,12 @@ function CreateStringNode(s: string){
     r.stringValue = s;
     return r;
 }
+function CreateTurtlePathNode(segments: paper.Segment[] = []){
+    var r = new RuntimeNode();
+    r.type = RuntimeType.TurtlePath;
+    r.segments = segments;
+    return r;
+}
 
 class Procedure{
     type: NodeType = NodeType.Procedure
@@ -161,7 +170,7 @@ class Procedure{
 
 enum RuntimeElementType{
     Path,
-    Group
+    Group,
 }
 
 abstract class RuntimeElement {
@@ -170,6 +179,7 @@ abstract class RuntimeElement {
     blendMode: string = ""
     opacity: number = -1
     type: RuntimeElementType = RuntimeElementType.Path
+    segments: paper.Segment[] | undefined = undefined
     isGroup = ():boolean => {return this.type == RuntimeElementType.Group} 
 
     constructor(){
@@ -185,6 +195,11 @@ abstract class RuntimeElement {
     Render(): paper.Item{
         //todo: paperJS is applying styles in order, not by hierarchy.
         //so style will need to be our own object, and then we check all of the current styles and do an appropriate union of them such that the more specific application takes priority.
+        // if(this.segments){
+        //     if(this.item){
+        //     }
+        //     this.item = PathItem.create(this.segments)
+        // }
         this.item.style = new paper.Style(this.style);
         if(this.blendMode){
             this.item.blendMode = this.blendMode
@@ -210,6 +225,13 @@ abstract class RuntimeElement {
             this.blendMode = bm;
         }else{
             throw new PEvalError("BadID",bm+" is not a valid blend mode.", node);
+        }
+    }
+    getSegments(): paper.Segment[] {
+        if(this.type == RuntimeElementType.Path){
+            return this.segments;
+        }else{
+            throw new Error("Can't get segments (turtle path) value for runtime node of type "+NodeType[this.type])
         }
     }
 }
@@ -270,4 +292,4 @@ class RuntimeGroup extends RuntimeElement {
     }
 }
 
-export {NodeType, treeNode, Procedure, RuntimeNode, RuntimeType, RuntimeItem, RuntimeGroup, RuntimeElement, RuntimeElementType, CreateElementNode, CreateGroupNode, CreateProcedureNode, CreateNumberNode, CreateStringNode}
+export {NodeType, treeNode, Procedure, RuntimeNode, RuntimeType, RuntimeItem, RuntimeGroup, RuntimeElement, RuntimeElementType, CreateTurtlePathNode, CreateElementNode, CreateGroupNode, CreateProcedureNode, CreateNumberNode, CreateStringNode}
